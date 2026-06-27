@@ -15,6 +15,26 @@ Both pieces share the same SQLite database. Your data lives on your hardware, in
 
 ---
 
+## Screenshots
+
+### Android App
+
+| Scanner Home | Scanning | Scanned Result |
+|:---:|:---:|:---:|
+| ![Scanner Home](examples/App_Scan_homepage.jpg) | ![Scanning](examples/App_Scan_Scanning.jpg) | ![Scanned Result](examples/App_Scan_Scanned.jpg) |
+
+| Stats | Settings |
+|:---:|:---:|
+| ![Stats](examples/App_Stats_Homepage.jpg) | ![Settings](examples/App_Settings_Homepage.jpg) |
+
+### Web Dashboard
+
+| Dashboard | Video Library |
+|:---:|:---:|
+| ![Dashboard](examples/Webgui_Dashboard.png) | ![Video Library](examples/Webgui_Videos.png) |
+
+---
+
 ## Architecture
 
 ```

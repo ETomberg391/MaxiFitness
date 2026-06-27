@@ -1,0 +1,172 @@
+/* ================================================================
+   MaxiClimber — Top Navbar (Mobile Fallback)
+   ================================================================ */
+
+.navbar {
+    display: none;
+}
+
+.nav-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    padding: 0.6rem 0;
+    gap: 0.5rem;
+}
+
+.logo {
+    font-size: 1.15rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), var(--accent-light));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: 0.08em;
+    transition: filter var(--transition);
+}
+
+.logo:hover { filter: brightness(1.2); }
+
+.nav-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+}
+
+.nav-links a {
+    color: var(--text-muted);
+    padding: 0.45rem 0.85rem;
+    border-radius: var(--radius-xs);
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all var(--transition);
+    position: relative;
+}
+
+.nav-links a:hover {
+    color: var(--text);
+    background: rgba(255,255,255,0.04);
+}
+
+.nav-links a.active {
+    color: var(--accent-light);
+    background: var(--accent-glow);
+}
+
+.nav-links a.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 20px;
+    height: 2px;
+    background: var(--accent);
+    border-radius: 1px;
+}
+
+/* ── Nav Dropdown ─────────────────────────────────────────── */
+.nav-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.nav-dropdown-btn {
+    color: var(--text-muted);
+    padding: 0.45rem 0.85rem;
+    border-radius: var(--radius-xs);
+    background: none;
+    border: none;
+    font: inherit;
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.nav-dropdown-btn:hover {
+    color: var(--text);
+    background: rgba(255,255,255,0.04);
+}
+
+.nav-dropdown-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    min-width: 180px;
+    background: var(--card-solid);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    padding: 0.35rem 0;
+    z-index: 200;
+}
+
+.nav-dropdown-menu.open {
+    display: block;
+}
+
+.nav-dropdown-menu a {
+    display: block;
+    color: var(--text-muted);
+    padding: 0.5rem 1rem;
+    text-decoration: none;
+    font-size: 0.85rem;
+    transition: all var(--transition);
+}
+
+.nav-dropdown-menu a:hover {
+    color: var(--text);
+    background: rgba(255,255,255,0.04);
+}
+
+.nav-dropdown-menu a.active {
+    color: var(--accent-light);
+    background: var(--accent-glow);
+}
+
+/* ── Mobile sidebar toggle ─────────────────────────────────── */
+.sidebar-toggle {
+    display: none;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.4rem;
+    cursor: pointer;
+    padding: 0.25rem;
+    line-height: 1;
+}
+
+/* ── Nav User ──────────────────────────────────────────────── */
+.nav-user {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.user-switcher {
+    font-size: 0.75rem;
+    font-family: var(--font-sans);
+    color: var(--text-muted);
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xs);
+    padding: 0.3rem 1.8rem 0.3rem 0.5rem;
+    cursor: pointer;
+    outline: none;
+    transition: all var(--transition);
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.5rem center;
+}
+
+.user-switcher:focus {
+    border-color: var(--accent);
+}
+
+.user-name {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+}

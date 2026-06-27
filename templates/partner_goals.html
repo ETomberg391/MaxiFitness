@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}Joint Goals{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header"><div class="d-flex justify-between align-center"><h2>Joint Goals</h2><button class="btn btn-sm btn-primary" id="open-goal-modal">+ New Goal</button></div></div>
+    {% if not partner %}
+    <div class="partner-empty" style="padding: 2rem; text-align: center;"><p class="text-dim">Link a partner first to set joint goals.</p><a href="/partner" class="btn btn-secondary">Go to Partner Page</a></div>
+    {% endif %}
+
+    {% set active = goals | selectattr('status', 'equalto', 'active') | list %}
+    {% if active %}
+    <div class="goals-section"><h3 class="section-title">Active Goals</h3>
+        {% for g in active %}
+        <div class="goal-card">
+            <div class="goal-card-header"><div><span class="goal-card-name">{{ g.name }}</span><span class="goal-card-type badge badge-info">{{ g.goal_type | replace('_', ' ') }}</span></div><span class="goal-card-dates text-sm text-dim">{{ g.start_date }} to {{ g.end_date }}</span></div>
+            {% if g.description %}<p class="goal-card-desc text-sm text-dim">{{ g.description }}</p>{% endif %}
+            <div class="goal-progress-bar"><div class="goal-progress-fill" style="width: {{ g.percent }}%"></div></div>
+            <div class="goal-card-footer d-flex justify-between align-center"><span class="text-sm">{{ g.current_value }} / {{ g.target_value }}</span><span class="goal-percent {{ 'text-success' if g.percent >= 100 else 'text-dim' }}">{{ g.percent }}%</span></div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% set completed = goals | selectattr('status', 'equalto', 'completed') | list %}
+    {% if completed %}
+    <div class="goals-section"><h3 class="section-title text-success">Completed</h3>
+        {% for g in completed %}
+        <div class="goal-card goal-card-completed">
+            <div class="goal-card-header"><div><span class="goal-card-name">{{ g.name }}</span><span class="badge badge-success">Done</span></div><span class="goal-card-dates text-sm text-dim">{{ g.start_date }} to {{ g.end_date }}</span></div>
+            <div class="goal-progress-bar"><div class="goal-progress-fill goal-progress-complete" style="width: 100%"></div></div>
+            <div class="goal-card-footer d-flex justify-between align-center"><span class="text-sm">{{ g.current_value }} / {{ g.target_value }}</span><span class="goal-percent text-success">Done!</span></div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% set expired = goals | selectattr('status', 'equalto', 'expired') | list %}
+    {% if expired %}
+    <div class="goals-section"><h3 class="section-title text-dim">Expired</h3>
+        {% for g in expired %}
+        <div class="goal-card goal-card-expired">
+            <div class="goal-card-header"><div><span class="goal-card-name">{{ g.name }}</span><span class="badge badge-rest">Expired</span></div><span class="goal-card-dates text-sm text-dim">{{ g.start_date }} to {{ g.end_date }}</span></div>
+            <div class="goal-progress-bar"><div class="goal-progress-fill goal-progress-expired" style="width: {{ g.percent }}%"></div></div>
+            <div class="goal-card-footer d-flex justify-between align-center"><span class="text-sm">{{ g.current_value }} / {{ g.target_value }}</span><span class="goal-percent text-dim">{{ g.percent }}%</span></div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% if not goals %}
+    <div class="partner-empty" style="padding: 2rem; text-align: center;"><p class="text-dim">No goals yet. Create your first joint goal!</p></div>
+    {% endif %}
+</div>
+<!-- New Goal Modal -->
+<div class="modal-overlay" id="goal-modal">
+    <div class="modal-card">
+        <div class="modal-header"><h3>New Joint Goal</h3><button class="modal-close" id="close-goal-modal">&times;</button></div>
+        <form id="goal-form">
+            <div class="form-group"><label for="goal-name">Goal Name</label><input type="text" id="goal-name" name="name" placeholder="e.g., 30 workouts this month" required></div>
+            <div class="form-group"><label for="goal-desc">Description (optional)</label><textarea id="goal-desc" name="description" rows="2"></textarea></div>
+            <div class="form-row">
+                <div class="form-group"><label for="goal-type">Goal Type</label>
+                    <select id="goal-type" name="goal_type" required>
+                        <option value="combined_workouts">Combined Workouts (count)</option>
+                        <option value="combined_minutes">Combined Minutes</option>
+                        <option value="combined_days">Combined Active Days</option>
+                        <option value="combined_calories">Combined Calories</option>
+                    </select>
+                </div>
+                <div class="form-group"><label for="goal-target">Target</label><input type="number" id="goal-target" name="target_value" min="1" required></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label for="goal-start">Start Date</label><input type="date" id="goal-start" name="start_date" required></div>
+                <div class="form-group"><label for="goal-end">End Date</label><input type="date" id="goal-end" name="end_date" required></div>
+            </div>
+            <button type="submit" class="btn btn-primary">Create Goal</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('open-goal-modal').addEventListener('click', function() {
+    document.getElementById('goal-modal').classList.add('active');
+    document.getElementById('goal-start').valueAsDate = new Date();
+    var end = new Date(); end.setMonth(end.getMonth() + 1);
+    document.getElementById('goal-end').valueAsDate = end;
+});
+document.getElementById('close-goal-modal').addEventListener('click', function() {
+    document.getElementById('goal-modal').classList.remove('active');
+});
+document.getElementById('goal-modal').addEventListener('click', function(e) {
+    if (e.target === this) this.classList.remove('active');
+});
+document.getElementById('goal-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    var fd = new FormData(this);
+    var data = {}; fd.forEach(function(v, k) { data[k] = v; });
+    data.target_value = parseInt(data.target_value);
+    fetch('/api/partner/goals', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)})
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+        if (res.ok) { location.reload(); }
+        else { alert(res.error); }
+    });
+});
+</script>
+{% endblock %}

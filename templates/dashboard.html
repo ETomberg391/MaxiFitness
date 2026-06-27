@@ -1,0 +1,593 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard — MaxiFitness{% endblock %}
+
+{% block content %}
+<!-- ── Welcome Header ──────────────────────────────────── -->
+<div class="dashboard-welcome">
+    <div>
+        <h1>Welcome back{{ ' ' + current_user_name if current_user_name else '' }}!</h1>
+        <p>
+            {% if settings.start_date %}
+                Started {{ settings.start_date }} &middot;
+            {% endif %}
+            <span class="text-accent fw-bold">
+                {{ get_current_phase() }}
+            </span>
+        </p>
+    </div>
+    <div class="dashboard-actions">
+        <button class="btn btn-primary quick-log-trigger" id="quickLogTrigger">+ Quick Log</button>
+        <a href="/schedule" class="btn btn-secondary">View Schedule</a>
+    </div>
+</div>
+
+<!-- ── Badge Notification Strip ────────────────────────── -->
+{% if new_badges %}
+<div class="badge-notification-strip">
+    <div class="card-header">
+        <h3>&#x1F3C6; New Badges Earned!</h3>
+        <a href="/badges" class="text-sm text-accent">View all &rarr;</a>
+    </div>
+    <div class="badge-notification-row">
+        {% for b in new_badges %}
+        <div class="badge-notif-item">
+            <span class="badge-notif-icon">{{ b['icon'] }}</span>
+            <span class="badge-notif-name">{{ b['name'] }}</span>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- ── Hero Cards Row ──────────────────────────────────── -->
+<div class="grid-2col">
+    <!-- Today's Workout -->
+    <div class="hero-card" id="todayWorkoutWidget">
+        <div>
+            <h3>&#x1F4CB; Today's Workout</h3>
+            <div class="hero-card-subtitle">From your active plan</div>
+        </div>
+        <div class="today-workout-body" id="todayWorkoutBody">
+            <span class="text-dim">Loading...</span>
+        </div>
+    </div>
+
+    <!-- Recent Achievements -->
+    <div class="hero-card">
+        <div>
+            <h3>Recent Achievements</h3>
+            <div class="hero-card-subtitle">Your fitness milestones</div>
+        </div>
+        <div id="achievementsBody">
+            {% if new_badges %}
+                {% for b in new_badges[:2] %}
+                <div class="badge-notif-item" style="margin-bottom:0.5rem">
+                    <span class="badge-notif-icon">{{ b['icon'] }}</span>
+                    <span class="badge-notif-name">{{ b['name'] }}</span>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="badge-notif-item" style="margin-bottom:0.5rem; background:var(--success-bg); border-color:rgba(34,197,94,0.2)">
+                    <span class="badge-notif-icon">&#x2705;</span>
+                    <span class="badge-notif-name">Keep going — earn badges by staying consistent!</span>
+                </div>
+            {% endif %}
+            <a href="/badges" class="text-sm text-accent">View all badges &rarr;</a>
+        </div>
+    </div>
+</div>
+
+<!-- ── Action Buttons Row ──────────────────────────────── -->
+<div class="action-row">
+    <a href="/videos" class="action-btn action-btn-blue">
+        <span class="action-btn-icon">&#x25B6;</span>
+        <span class="action-btn-label">Workouts Library</span>
+    </a>
+    <a href="/progress" class="action-btn action-btn-green">
+        <span class="action-btn-icon">&#x1F4C8;</span>
+        <span class="action-btn-label">View Progress</span>
+    </a>
+    <a href="/nutrition" class="action-btn action-btn-purple">
+        <span class="action-btn-icon">&#x1F957;</span>
+        <span class="action-btn-label">Nutrition</span>
+    </a>
+    <a href="/plans" class="action-btn action-btn-accent">
+        <span class="action-btn-icon">&#x1F4CB;</span>
+        <span class="action-btn-label">Browse Plans</span>
+    </a>
+</div>
+
+<!-- ── Stat Cards ──────────────────────────────────────── -->
+<div class="stat-grid">
+    <div class="stat-card">
+        <div class="stat-icon">&#x23F1;</div>
+        <div class="stat-info">
+            <span class="stat-label">This Week</span>
+            <span class="stat-value">{{ week_duration }} min</span>
+            <span class="text-dim text-sm">{{ week_calories }} cal</span>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon">&#x1F4C5;</div>
+        <div class="stat-info">
+            <span class="stat-label">This Month</span>
+            <span class="stat-value">{{ month_duration }} min</span>
+            <span class="text-dim text-sm">{{ month_calories }} cal</span>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon">&#x2B50;</div>
+        <div class="stat-info">
+            <span class="stat-label">All Time</span>
+            <span class="stat-value">{{ total['cnt'] }} workouts</span>
+            <span class="text-dim text-sm">{{ total['dur'] }} min &middot; {{ total['cal'] }} cal</span>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon">&#x2696;</div>
+        <div class="stat-info">
+            <span class="stat-label">Weight</span>
+            {% set current = metrics[0]['weight'] if metrics and metrics[0]['weight'] else settings.get('start_weight', '—') %}
+            <span class="stat-value">{{ current }}{% if settings.unit == 'lbs' %} lbs{% else %} kg{% endif %}</span>
+            {% if settings.goal_weight %}
+                <span class="text-dim text-sm">Goal: {{ settings.goal_weight }}{% if settings.unit == 'lbs' %} lbs{% else %} kg{% endif %}</span>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- ── Charts Row ──────────────────────────────────────── -->
+<div class="grid-2col">
+    <div class="card">
+        <div class="card-header">
+            <h3>Weight Trend</h3>
+            <span class="text-dim text-sm">last 180 days</span>
+        </div>
+        <div class="chart-container">
+            <canvas id="weightChart"></canvas>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header">
+            <h3>Weekly Volume</h3>
+            <span class="text-dim text-sm">last 12 weeks</span>
+        </div>
+        <div class="chart-container">
+            <canvas id="weeklyChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- ── Bottom Row: Consistency + Recent Workouts ───────── -->
+<div class="grid-2col">
+    <!-- Consistency -->
+    <div class="card">
+        <div class="card-header">
+            <h3>&#x1F525; Consistency</h3>
+        </div>
+        <div class="consistency-stats">
+            <div class="streak-display">
+                <span class="streak-number">{{ streak }}</span>
+                <span class="streak-label">day streak</span>
+                {% if streak >= 7 %}
+                <span class="streak-badge">&#x1F525; On fire!</span>
+                {% elif streak >= 3 %}
+                <span class="streak-badge">&#x1F4AA; Keep going!</span>
+                {% elif streak == 0 %}
+                <span class="streak-badge">Start your streak!</span>
+                {% endif %}
+            </div>
+            <div class="consistency-bars">
+                <div class="consistency-row">
+                    <span>This week</span>
+                    <div class="consistency-bar">
+                        <div class="bar-fill" style="width: {{ weekly.consistency }}%"></div>
+                    </div>
+                    <span class="bar-value">{{ weekly.workout_days }}/{{ weekly.days_in_week }}</span>
+                </div>
+                <div class="consistency-row">
+                    <span>This month</span>
+                    <div class="consistency-bar">
+                        <div class="bar-fill" style="width: {{ monthly.consistency }}%"></div>
+                    </div>
+                    <span class="bar-value">{{ monthly.workout_days }}/{{ monthly.days_in_month }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Workouts -->
+    <div class="card">
+        <div class="card-header">
+            <h3>Recent Workouts</h3>
+            <a href="/workouts" class="text-sm text-accent">View all &rarr;</a>
+        </div>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Duration</th>
+                        <th>Type</th>
+                        <th>Intensity</th>
+                        <th>Calories</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for w in recent %}
+                    <tr>
+                        <td>{{ w.date }}</td>
+                        <td>{{ w.duration_min }} min</td>
+                        <td>
+                            {% set type_badges = {'HIIT':'high','Cardio':'moderate','Endurance':'moderate','Strength':'high','Custom':'info'} %}
+                            <span class="badge badge-{{ type_badges.get(w.workout_type, 'info') }}">{{ w.workout_type }}</span>
+                        </td>
+                        <td>
+                            {% set int_badges = {'Low':'low','Moderate':'moderate','High':'high','Max':'high'} %}
+                            <span class="badge badge-{{ int_badges.get(w.intensity, 'info') }}">{{ w.intensity or '—' }}</span>
+                        </td>
+                        <td>{{ w.calories or '—' }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-dim text-center" style="padding:2rem">No workouts logged yet. <a href="/workouts" class="text-accent">Log your first one!</a></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ── Activity Heatmap (full width) ───────────────────── -->
+<div class="card">
+    <div class="card-header"><h3>Activity Calendar</h3></div>
+    <div class="heatmap-container">
+        {% for week in heatmap %}
+        <div class="heatmap-row">
+            {% for day in week %}
+            <div class="heatmap-cell {% if day.has_workout %}heat-{{ heatmap_level(day.duration_min) }}{% endif %}"
+                 title="{{ day.date }}: {{ day.duration_min }} min, {{ day.calories }} cal">
+            </div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+    </div>
+    <div class="heatmap-legend">
+        <span>Less</span>
+        <div class="legend-cell heat-0"></div>
+        <div class="legend-cell heat-1"></div>
+        <div class="legend-cell heat-2"></div>
+        <div class="legend-cell heat-3"></div>
+        <span>More</span>
+    </div>
+</div>
+
+<!-- ── Today's Pick (compact, below heatmap) ───────────── -->
+{% if dashboard_rec %}
+<div class="card compact-recommend">
+    <div class="compact-recommend-header">
+        <span>&#x1F4A1; Today's pick</span>
+        <a href="/recommend" class="text-sm text-accent">More &rarr;</a>
+    </div>
+    <div class="compact-recommend-body">
+        <strong>{{ dashboard_rec.video.name }}</strong>
+        <span class="badge badge-info">{{ dashboard_rec.video.duration_min }} min</span>
+        <span class="badge badge-{{ dashboard_rec.video.intensity }}">{{ dashboard_rec.video.intensity }}</span>
+        <a href="{{ dashboard_rec.video.url }}" target="_blank" rel="noopener" class="btn btn-primary btn-sm">
+            &#x25B6; Start
+        </a>
+    </div>
+</div>
+{% endif %}
+
+<!-- ── Weigh-In Widget (compact) ───────────────────────── -->
+<div class="weighin-widget card" id="weighinWidget">
+    <div class="card-header">
+        <h3>&#x2696; Weekly Weigh-In</h3>
+    </div>
+    <div class="weighin-body" id="weighinBody">
+        <span class="text-dim">Loading...</span>
+    </div>
+</div>
+
+<!-- ── Quick Log Modal ─────────────────────────────────── -->
+<div class="quick-log-overlay hidden" id="quickLogOverlay">
+    <div class="quick-log-card">
+        <div class="quick-log-header">
+            <h3>Quick Log Workout</h3>
+            <button class="quick-log-close" id="quickLogClose">&times;</button>
+        </div>
+        <form id="quickLogForm" class="quick-log-form">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="qlDate">Date</label>
+                    <input type="date" id="qlDate" name="date" required>
+                </div>
+                <div class="form-group">
+                    <label for="qlDuration">Duration (min)</label>
+                    <input type="number" id="qlDuration" name="duration_min" min="1" value="20" step="5" required data-validate="positive_int">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Intensity</label>
+                <div class="quick-intensity-group">
+                    <label class="quick-intensity-option"><input type="radio" name="intensity" value="beginner"><span>Beginner</span></label>
+                    <label class="quick-intensity-option"><input type="radio" name="intensity" value="moderate" checked><span>Moderate</span></label>
+                    <label class="quick-intensity-option"><input type="radio" name="intensity" value="high"><span>High</span></label>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%">Log Workout</button>
+            <button type="button" class="quick-log-expand-btn" id="quickLogExpand">+ Add details...</button>
+            <div class="quick-log-expanded" id="quickLogExpanded">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="qlCalories">Calories</label>
+                        <input type="number" id="qlCalories" name="calories" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="qlType">Type</label>
+                        <select id="qlType" name="workout_type">
+                            <option value="steady">Steady</option>
+                            <option value="hiit">HIIT</option>
+                            <option value="tabata">Tabata</option>
+                            <option value="cross-training">Cross-Training</option>
+                            <option value="custom">Custom</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="qlHrAvg">Avg HR</label>
+                        <input type="number" id="qlHrAvg" name="heart_rate_avg" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="qlHrMax">Max HR</label>
+                        <input type="number" id="qlHrMax" name="heart_rate_max" min="0">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="qlExertion">How did that feel?</label>
+                    <div class="exertion-options">
+                        <label class="exertion-option"><input type="radio" name="exertion" value="1"><span>&#x1F62B; Brutal</span></label>
+                        <label class="exertion-option"><input type="radio" name="exertion" value="2"><span>&#x1F615; Hard</span></label>
+                        <label class="exertion-option"><input type="radio" name="exertion" value="3" checked><span>&#x1F610; Okay</span></label>
+                        <label class="exertion-option"><input type="radio" name="exertion" value="4"><span>&#x1F60A; Good</span></label>
+                        <label class="exertion-option"><input type="radio" name="exertion" value="5"><span>&#x1F525; Felt Great</span></label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="qlNotes">Notes</label>
+                    <textarea id="qlNotes" name="notes" rows="2"></textarea>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Shared Chart.js defaults ────────────────────────────
+Chart.defaults.color = '#94a3b8';
+Chart.defaults.borderColor = 'rgba(148,163,184,0.08)';
+Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
+
+// ── Weight Trend (line chart) ───────────────────────────
+fetch('/api/weight-chart')
+    .then(r => r.json())
+    .then(data => {
+        const ctx = document.getElementById('weightChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.map(d => d.date),
+                datasets: [{
+                    label: 'Weight',
+                    data: data.map(d => d.weight),
+                    borderColor: '#ef4444',
+                    backgroundColor: 'rgba(239,68,68,0.1)',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 3,
+                    pointHoverRadius: 5,
+                    pointBackgroundColor: '#ef4444',
+                    borderWidth: 2,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                aspectRatio: 1.6,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: 'rgba(22,27,44,0.95)',
+                        borderColor: 'rgba(255,255,255,0.06)',
+                        borderWidth: 1,
+                        titleColor: '#e2e8f0',
+                        bodyColor: '#94a3b8',
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(148,163,184,0.08)' },
+                        ticks: { maxTicksLimit: 8, maxRotation: 45 }
+                    },
+                    y: {
+                        grid: { color: 'rgba(148,163,184,0.08)' },
+                    }
+                }
+            }
+        });
+    })
+    .catch(err => console.error('Weight chart failed:', err));
+
+// ── Weekly Volume (bar chart) ───────────────────────────
+fetch('/api/weekly-summary')
+    .then(r => r.json())
+    .then(data => {
+        const ctx = document.getElementById('weeklyChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.map(d => {
+                    const parts = d.week.split('-');
+                    return parts[1] + '/' + parts[2];
+                }),
+                datasets: [{
+                    label: 'Minutes',
+                    data: data.map(d => d.duration),
+                    backgroundColor: 'rgba(239,68,68,0.6)',
+                    borderColor: '#ef4444',
+                    borderWidth: 1,
+                    borderRadius: 4,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                aspectRatio: 1.6,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            afterLabel: function(ctx) {
+                                const d = data[ctx.dataIndex];
+                                return d.sessions + ' session' + (d.sessions !== 1 ? 's' : '') + ' \u00B7 ' + d.calories + ' cal';
+                            }
+                        },
+                        backgroundColor: 'rgba(22,27,44,0.95)',
+                        borderColor: 'rgba(255,255,255,0.06)',
+                        borderWidth: 1,
+                        titleColor: '#e2e8f0',
+                        bodyColor: '#94a3b8',
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(148,163,184,0.08)' },
+                        ticks: {
+                            callback: v => v + ' min'
+                        }
+                    }
+                }
+            }
+        });
+    })
+    .catch(err => console.error('Weekly chart failed:', err));
+
+// ── Weigh-In Widget ─────────────────────────────────────
+(function () {
+    fetch('/api/weighin-status')
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            var body = document.getElementById('weighinBody');
+            if (!body) return;
+            if (data.is_today) {
+                if (data.has_weighin_today) {
+                    body.innerHTML =
+                        '<div class="weighin-done">' +
+                        '  <span class="text-success fw-bold">\u2713 Weighed in today</span><br>' +
+                        '  <span class="text-sm text-dim">' + (data.last_weight || '') +
+                        ' lbs \u00B7 Total loss: ' + (data.total_loss || 0) + ' lbs</span>' +
+                        '</div>';
+                } else {
+                    body.innerHTML =
+                        '<div class="weighin-prompt">' +
+                        '  <span class="fw-bold text-accent">It\'s weigh-in day!</span><br>' +
+                        '  <span class="text-sm text-dim">Log your weight on the Progress page</span><br>' +
+                        '  <a href="/progress" class="btn btn-sm btn-primary mt-1">Log Weigh-In</a>' +
+                        '</div>';
+                }
+            } else {
+                body.innerHTML =
+                    '<div class="weighin-countdown">' +
+                    '  <span class="text-dim">Next weigh-in: ' + data.weighin_day_name +
+                    ' (' + data.days_until + ' day' + (data.days_until !== 1 ? 's' : '') + ')</span><br>' +
+                    '  <span class="text-sm text-dim">' +
+                    (data.last_weight ? 'Last: ' + data.last_weight + ' lbs' : 'No weigh-ins yet') +
+                    '</span>' +
+                    '</div>';
+            }
+        })
+        .catch(function (err) { console.error('Weigh-in status failed:', err); });
+})();
+
+// ── Today's Workout Widget ──────────────────────────────
+(function () {
+    fetch('/api/today-workout')
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            var body = document.getElementById('todayWorkoutBody');
+            if (!body) return;
+            if (!data) {
+                body.innerHTML = '<div class="today-workout-rest"><span class="text-dim">No workout planned today. <a href="/plans" class="text-accent">Start a plan</a> or <a href="/recommend" class="text-accent">get a recommendation</a>.</span></div>';
+                return;
+            }
+            var html = '<div class="today-workout-info">' +
+                '<span class="today-workout-name">' + data.workout_name + '</span>' +
+                '<div class="today-workout-meta">' +
+                '<span class="badge badge-info">' + (data.duration_min || '?') + ' min</span>' +
+                (data.intensity ? '<span class="badge badge-' + data.intensity + '">' + data.intensity + '</span>' : '') +
+                '</div>' +
+                '<span class="text-dim text-sm">' + data.plan_name + ' \u00B7 Week ' + data.week_number + '</span>' +
+                '</div>';
+            if (data.video_url) {
+                html += '<a href="' + data.video_url + '" target="_blank" rel="noopener" class="btn btn-primary btn-sm" style="margin-top:0.75rem">&#x25B6; Start</a>';
+            }
+            body.innerHTML = html;
+        })
+        .catch(function (err) { console.error('Today workout failed:', err); });
+})();
+
+// ── Quick Log Modal ─────────────────────────────────────
+(function() {
+    var overlay = document.getElementById('quickLogOverlay');
+    var trigger = document.getElementById('quickLogTrigger');
+    var closeBtn = document.getElementById('quickLogClose');
+    var expandBtn = document.getElementById('quickLogExpand');
+    var expanded = document.getElementById('quickLogExpanded');
+    var form = document.getElementById('quickLogForm');
+    if (!overlay || !trigger) return;
+    var dateInput = document.getElementById('qlDate');
+    if (dateInput) dateInput.valueAsDate = new Date();
+    trigger.addEventListener('click', function() {
+        overlay.classList.remove('hidden');
+    });
+    function closeQuickLog() {
+        overlay.classList.add('hidden');
+    }
+    closeBtn.addEventListener('click', closeQuickLog);
+    overlay.addEventListener('click', function(e) {
+        if (e.target === overlay) closeQuickLog();
+    });
+    expandBtn.addEventListener('click', function() {
+        expanded.classList.toggle('open');
+        expandBtn.textContent = expanded.classList.contains('open') ? '\u2212 Hide details' : '+ Add details...';
+    });
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        var fd = new FormData(form);
+        fetch('/workouts', {
+            method: 'POST',
+            body: fd
+        }).then(function(r) {
+            if (r.redirected || r.ok) {
+                closeQuickLog();
+                showToast('Workout logged!', '\u2705', 3000);
+                setTimeout(function() { window.location.reload(); }, 1500);
+            }
+        }).catch(function(err) {
+            showToast('Error logging workout', '\u274C', 3000);
+            console.error(err);
+        });
+    });
+})();
+{% endblock %}

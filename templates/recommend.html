@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}What Should I Do Today?{% endblock %}
+
+{% block content %}
+<div class="dashboard-welcome">
+    <div>
+        <h1>What Should I Do Today?</h1>
+        <p class="text-dim">Let us pick the right workout for you</p>
+    </div>
+</div>
+
+{% if rec %}
+<!-- ── Recommended Workout ──────────────────────────────────── -->
+<div class="card recommend-card">
+    <div class="recommend-badge">&#x2728; Recommended for you</div>
+    <div class="recommend-video">
+        <div class="recommend-thumbnail">
+            <img class="yt-thumb" data-yt-id="{{ rec.video.url.split('v=')[-1] }}"
+                 alt="{{ rec.video.name }}" loading="lazy">
+        </div>
+        <div class="recommend-info">
+            <h2>{{ rec.video.name }}</h2>
+            <div class="recommend-meta">
+                <span>{{ rec.video.coach }}</span>
+                <span class="badge badge-info">{{ rec.video.duration_min }} min</span>
+                <span class="badge badge-{{ rec.video.intensity }}">{{ rec.video.intensity }}</span>
+                <span class="badge badge-category">{{ rec.video.category }}</span>
+            </div>
+            <p class="text-dim">{{ rec.video.description }}</p>
+            <div class="recommend-reasons">
+                {% for reason in rec.reasons %}
+                <div class="reason-item">&#x1F4A1; {{ reason }}</div>
+                {% endfor %}
+            </div>
+            <a href="{{ rec.video.url }}" target="_blank" rel="noopener" class="btn btn-primary">
+                &#x25B6; Start Workout
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- ── Alternatives ─────────────────────────────────────────── -->
+{% if alternatives %}
+<div class="card">
+    <div class="card-header">
+        <h3>Or try one of these</h3>
+    </div>
+    <div class="alternatives-grid">
+        {% for alt in alternatives %}
+        <div class="alt-card">
+            <div class="alt-info">
+                <strong>{{ alt.name }}</strong>
+                <span class="badge badge-info">{{ alt.duration_min }} min</span>
+                <span class="badge badge-{{ alt.intensity }}">{{ alt.intensity }}</span>
+            </div>
+            <a href="{{ alt.url }}" target="_blank" rel="noopener" class="btn btn-secondary btn-sm">
+                Play
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{% else %}
+<div class="card text-center">
+    <p class="text-dim">No recommendation available. Browse the full video library!</p>
+    <a href="/videos" class="btn btn-primary">Browse Videos</a>
+</div>
+{% endif %}
+
+<!-- ── Variety Report ───────────────────────────────────────── -->
+<div class="card">
+    <div class="card-header">
+        <h3>Your Workout Variety</h3>
+    </div>
+    <div class="variety-grid">
+        {% for cat in variety.tried %}
+        <div class="variety-badge tried">{{ cat }}</div>
+        {% endfor %}
+        {% for cat in variety.untried %}
+        <div class="variety-badge untried">{{ cat }}</div>
+        {% endfor %}
+    </div>
+    <p class="text-dim text-sm mt-1">
+        Tried {{ variety.tried|length }} of {{ variety.total_categories }} categories
+        {% if variety.untried %}
+        &mdash; haven't tried: {{ variety.untried|join(', ') }}
+        {% endif %}
+    </p>
+</div>
+
+<!-- ── Surprise Me ──────────────────────────────────────────── -->
+<div class="card text-center">
+    <button class="btn btn-primary btn-lg surprise-btn" onclick="surpriseMe()">
+        &#x1F3B0; Surprise Me!
+    </button>
+    <p class="text-dim text-sm mt-1">Random workout from your safe categories</p>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function surpriseMe() {
+    fetch('/api/recommend-random')
+        .then(r => r.json())
+        .then(data => {
+            if (data.url) {
+                window.open(data.url, '_blank', 'noopener');
+            }
+        });
+}
+</script>
+{% endblock %}

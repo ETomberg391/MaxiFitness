@@ -1,0 +1,71 @@
+# ─── Environment / Secrets ──────────────────────────────────────────────────
+.env
+
+# ─── Database ───────────────────────────────────────────────────────────────
+*.db
+
+# ─── Python ─────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+venv/
+.test-venv/
+*.pyc
+
+# ─── User-generated content ─────────────────────────────────────────────────
+static/photos/
+
+# ─── Logs ───────────────────────────────────────────────────────────────────
+*.log
+server.log
+current_app_logs*.txt
+
+# ─── SSL certificates ───────────────────────────────────────────────────────
+server.crt
+server.key
+ca.pem
+
+# ─── Android build artifacts ────────────────────────────────────────────────
+android/.gradle/
+android/.kotlin/
+android/app/build/
+android/build/
+android/local.properties
+android/*.iml
+android/app/*.iml
+*.apk
+
+# ─── IDE ────────────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ─── OS ─────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ─── Debug / dev artifacts ──────────────────────────────────────────────────
+debug/
+design-research/
+
+# ─── Old/stale copies ───────────────────────────────────────────────────────
+android_old/
+app_old.py
+app_OLD.py
+db_old.py
+*_OLD.html
+*_OLD.css
+
+# ─── Dev tools (not part of the product) ────────────────────────────────────
+screenshot_mobile.py
+chromedirect_tool.md
+failing_app_fix.md
+suggestions.md
+launcher_LLM.sh
+
+# ─── Dev notes / planning docs ──────────────────────────────────────────────
+plan_*.md
+maxiclimber-workout-guide.md
+maxiclimber-workout-guide.pdf

@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Workout Plans{% endblock %}
+
+{% block content %}
+<div class="dashboard-welcome">
+    <div>
+        <h1>Workout Plans</h1>
+        <p class="text-dim">Choose a plan or create your own weekly schedule</p>
+    </div>
+    <div class="dashboard-actions">
+        <a href="/plans/new" class="btn btn-primary">+ Create Custom Plan</a>
+    </div>
+</div>
+
+{% if current_user and current_user.get('prolapse_safe') %}
+<div class="card prolapse-notice">
+    <p class="text-sm">
+        <span class="text-accent">&#x26A0; Prolapse-safe mode:</span>
+        Only prolapse-safe videos are available. All template plans respect pelvic floor safety guidelines.
+    </p>
+</div>
+{% endif %}
+
+<div class="plans-grid">
+    {% for plan in plans %}
+    <div class="card plan-card{% if plan['is_assigned'] %} plan-active{% endif %}">
+        <div class="card-header">
+            <h3>{{ plan['name'] }}</h3>
+            {% if plan['is_assigned'] %}
+            <span class="badge badge-success">Active &middot; Week {{ plan['current_week'] }}</span>
+            {% else %}
+            <span class="badge badge-info">Available</span>
+            {% endif %}
+        </div>
+        <p class="text-dim text-sm">{{ plan['description'] }}</p>
+        <div class="plan-meta">
+            <span class="badge badge-frequency badge-{{ plan['frequency'] }}day">{{ plan['frequency'] }}-Day Split</span>
+            <span class="text-dim text-sm">{{ plan['weeks_count'] }} week{{ 's' if plan['weeks_count'] > 1 else '' }}</span>
+            {% if plan['is_template'] %}
+            <span class="text-dim text-sm">&#8226; Template</span>
+            {% endif %}
+        </div>
+        <div class="plan-actions">
+            {% if plan['is_assigned'] %}
+            <a href="/plans/{{ plan['id'] }}" class="btn btn-sm btn-primary">View Plan</a>
+            {% else %}
+            <form method="POST" action="/plans/{{ plan['id'] }}/assign" class="inline-form">
+                <button type="submit" class="btn btn-sm btn-primary">Start This Plan</button>
+            </form>
+            <a href="/plans/{{ plan['id'] }}" class="btn btn-sm btn-secondary">Preview</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

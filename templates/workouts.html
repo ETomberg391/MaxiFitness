@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+
+{% block title %}Log Workout — MaxiFitness{% endblock %}
+
+{% block content %}
+<div class="card mb-3">
+    <div class="card-header">
+        <h2>Log Workout</h2>
+    </div>
+    <form method="POST" action="/workouts" id="workoutForm">
+        <div class="form-row">
+            <div class="form-group">
+                <label for="date">Date</label>
+                <input type="date" id="date" name="date" required>
+            </div>
+            <div class="form-group">
+                <label for="duration_min">Duration (min)</label>
+                <input type="number" id="duration_min" name="duration_min" min="1" required data-validate="positive_int">
+            </div>
+            <div class="form-group">
+                <label for="workout_type">Type</label>
+                <select id="workout_type" name="workout_type" required>
+                    <option value="steady">Steady</option>
+                    <option value="hiit">HIIT</option>
+                    <option value="tabata">Tabata</option>
+                    <option value="cross-training">Cross-Training</option>
+                    <option value="custom">Custom</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="intensity">Intensity</label>
+                <select id="intensity" name="intensity" required>
+                    <option value="beginner">Beginner</option>
+                    <option value="moderate">Moderate</option>
+                    <option value="high">High</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="calories">Calories</label>
+                <input type="number" id="calories" name="calories" min="0" data-validate="non_negative_int">
+            </div>
+            <div class="form-group">
+                <label for="heart_rate_avg">Avg Heart Rate</label>
+                <input type="number" id="heart_rate_avg" name="heart_rate_avg" min="0" data-validate="non_negative_int">
+            </div>
+            <div class="form-group">
+                <label for="heart_rate_max">Max Heart Rate</label>
+                <input type="number" id="heart_rate_max" name="heart_rate_max" min="0" data-validate="non_negative_int">
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="notes">Notes</label>
+            <textarea id="notes" name="notes" rows="3"></textarea>
+        </div>
+        <div class="form-group exertion-group">
+            <label>How did that feel?</label>
+            <div class="exertion-options">
+                <label class="exertion-option"><input type="radio" name="exertion" value="1"><span>😫 Brutal</span></label>
+                <label class="exertion-option"><input type="radio" name="exertion" value="2"><span>😕 Hard</span></label>
+                <label class="exertion-option"><input type="radio" name="exertion" value="3" checked><span>😐 Okay</span></label>
+                <label class="exertion-option"><input type="radio" name="exertion" value="4"><span>😊 Good</span></label>
+                <label class="exertion-option"><input type="radio" name="exertion" value="5"><span>🔥 Felt Great</span></label>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary">Log Workout</button>
+    </form>
+{% if session.get('last_workout_summary') %}
+<div class="gamified-summary card">
+    <div class="gamified-icon">{{ session.get('last_workout_emoji', '🎉') }}</div>
+    <div class="gamified-text">{{ session.get('last_workout_summary') }}</div>
+    <button class="gamified-dismiss" onclick="this.parentElement.remove()">×</button>
+</div>
+{% endif %}
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <div class="d-flex justify-between align-center">
+            <h2>Past Workouts</h2>
+            <span class="text-dim text-sm">Showing {{ workouts|length }} of {{ total }} workouts</span>
+        </div>
+    </div>
+
+    {% if workouts %}
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Duration</th>
+                    <th>Type</th>
+                    <th>Intensity</th>
+                    <th>Calories</th>
+                    <th>HR Avg</th>
+                    <th>HR Max</th>
+                    <th>Feeling</th>
+                    <th>Notes</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for w in workouts %}
+                <tr>
+                    <td>{{ w.date }}</td>
+                    <td>{{ w.duration_min }} min</td>
+                    <td>{{ w.workout_type | replace('-', ' ') | title }}</td>
+                    <td><span class="badge badge-{{ w.intensity }}">{{ w.intensity | title }}</span></td>
+                    <td>{{ w.calories if w.calories else '—' }}</td>
+                    <td>{{ w.heart_rate_avg if w.heart_rate_avg else '—' }}</td>
+                    <td>{{ w.heart_rate_max if w.heart_rate_max else '—' }}</td>
+                    <td>{% set exertion_emoji = {1:'😫',2:'😕',3:'😐',4:'😊',5:'🔥'} %}{{ exertion_emoji.get(w.exertion, '—') }}</td>
+                    <td class="text-dim text-sm">{{ w.notes[:40] ~ '…' if w.notes and w.notes|length > 40 else (w.notes or '—') }}</td>
+                    <td>
+                        <form method="POST" action="/workouts/{{ w.id }}/delete" class="inline-delete" onsubmit="return confirm('Delete this workout?');">
+                            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="padding: 2rem; text-align: center;" class="text-dim">
+        No workouts logged yet. Use the form above to get started.
+    </div>
+    {% endif %}
+
+    {% if total_pages > 1 %}
+    <div class="d-flex justify-between align-center" style="padding: 1rem 1.5rem;">
+        <div>
+            {% if page > 1 %}
+            <a href="?page={{ page - 1 }}" class="btn btn-sm btn-secondary">Previous</a>
+            {% else %}
+            <span class="btn btn-sm btn-secondary" style="opacity: 0.3; pointer-events: none;">Previous</span>
+            {% endif %}
+        </div>
+        <div class="d-flex gap-1" style="align-items: center;">
+            {% for p in range(1, total_pages + 1) %}
+                {% if p == page %}
+                <span class="btn btn-sm btn-primary">{{ p }}</span>
+                {% elif p == 1 or p == total_pages or (p >= page - 2 and p <= page + 2) %}
+                <a href="?page={{ p }}" class="btn btn-sm btn-secondary">{{ p }}</a>
+                {% elif p == page - 3 or p == page + 3 %}
+                <span class="text-dim">…</span>
+                {% endif %}
+            {% endfor %}
+        </div>
+        <div>
+            {% if page < total_pages %}
+            <a href="?page={{ page + 1 }}" class="btn btn-sm btn-secondary">Next</a>
+            {% else %}
+            <span class="btn btn-sm btn-secondary" style="opacity: 0.3; pointer-events: none;">Next</span>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('date').valueAsDate = new Date();
+</script>
+{% endblock %}

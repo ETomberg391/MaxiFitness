@@ -1,0 +1,551 @@
+{% extends "base.html" %}
+
+{% block title %}Video Library — MaxiFitness{% endblock %}
+
+{% block content %}
+<!-- ── Page Header ──────────────────────────────────────── -->
+<div class="page-header">
+    <div class="page-header-row">
+        <div>
+            <h1>Video Library</h1>
+            <p class="subtitle">Official MaxiClimber workout videos — play them right here</p>
+        </div>
+        <button class="btn btn-primary" id="addVideoBtn" onclick="document.getElementById('addVideoModal').style.display='flex'">+ Add Video</button>
+    </div>
+</div>
+
+<!-- ── Add Video Modal ──────────────────────────────────── -->
+<div class="video-player-overlay" id="addVideoModal" style="display:none;">
+    <div class="video-player-container" style="width:90%;max-width:520px;">
+        <div class="video-player-header">
+            <h3>Add Workout Video</h3>
+            <button class="video-player-close" onclick="document.getElementById('addVideoModal').style.display='none'">&times;</button>
+        </div>
+        <form method="POST" action="/videos" class="add-video-form">
+            <div class="form-group">
+                <label>YouTube URL *</label>
+                <input type="url" name="url" required placeholder="https://www.youtube.com/watch?v=...">
+            </div>
+            <div class="form-group">
+                <label>Video Name *</label>
+                <input type="text" name="name" required placeholder="e.g. 20 Min Full Body HIIT">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Coach</label>
+                    <input type="text" name="coach" placeholder="e.g. Coach Jamie">
+                </div>
+                <div class="form-group">
+                    <label>Duration (min)</label>
+                    <input type="number" name="duration_min" min="1" placeholder="20">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Category</label>
+                    <select name="category">
+                        <option value="10min">10-Minute</option>
+                        <option value="20min">20-Minute</option>
+                        <option value="dumbbell">Dumbbell</option>
+                        <option value="back_biceps">Back &amp; Biceps</option>
+                        <option value="chest_tricep">Chest &amp; Tricep</option>
+                        <option value="shoulder_legs">Shoulders &amp; Legs</option>
+                        <option value="prolapse">Prolapse-Safe</option>
+                        <option value="yoga">Yoga</option>
+                        <option value="hiit">HIIT</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Intensity</label>
+                    <select name="intensity">
+                        <option value="beginner">Beginner</option>
+                        <option value="moderate" selected>Moderate</option>
+                        <option value="high">High</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea name="description" rows="2" placeholder="Brief description of the workout..."></textarea>
+            </div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;">
+                <button type="button" class="btn btn-secondary" onclick="document.getElementById('addVideoModal').style.display='none'">Cancel</button>
+                <button type="submit" class="btn btn-primary">Add Video</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ── Filter Tabs ─────────────────────────────────────── -->
+<div class="filter-tabs">
+    <button class="filter-tab active" data-filter="all">All</button>
+    <button class="filter-tab" data-filter="10min">10-Minute</button>
+    <button class="filter-tab" data-filter="20min">20-Minute</button>
+    <button class="filter-tab" data-filter="dumbbell">Dumbbell</button>
+    <button class="filter-tab" data-filter="back_biceps">Back &amp; Biceps</button>
+    <button class="filter-tab" data-filter="chest_tricep">Chest &amp; Tricep</button>
+    <button class="filter-tab" data-filter="shoulder_legs">Shoulders &amp; Legs</button>
+    <button class="filter-tab" data-filter="prolapse">Prolapse-Safe</button>
+    <button class="filter-tab" data-filter="yoga">Yoga</button>
+</div>
+
+<!-- ── Prolapse Medical Disclaimer ────────────────────── -->
+<div class="prolapse-disclaimer" id="prolapseDisclaimer" style="display:none;">
+    <div class="card" style="border-left: 3px solid #f59e0b; background: rgba(245,158,11,0.08);">
+        <div class="video-info">
+            <p class="text-dim" style="font-size: 0.85rem; line-height: 1.5;">
+                <strong style="color: #f59e0b;">⚠ Medical Disclaimer:</strong> These videos were curated for pelvic organ prolapse, asthma, obesity, and foot conditions.
+                They feature low-impact, seated, and gentle exercises from certified physical therapists.
+                <strong>Always consult your doctor or pelvic floor physical therapist before starting any exercise program.</strong>
+                Stop immediately if you experience pain, increased pressure, or discomfort.
+            </p>
+        </div>
+    </div>
+</div>
+
+
+<!-- ── Video Grid ──────────────────────────────────────── -->
+<div class="video-grid">
+    {% for video in videos %}
+    {% set yt_id = video.url.split('v=')[-1] %}
+    <div class="video-card"
+         data-category="{{ video.category }}"
+         data-yt-id="{{ yt_id }}"
+         data-title="{{ video.name }}"
+         data-coach="{{ video.coach }}"
+         data-duration="{{ video.duration_min }}"
+         data-intensity="{{ video.intensity }}"
+         data-url="{{ video.url }}"
+         role="button"
+         tabindex="0"
+         aria-label="Play {{ video.name }}">
+        <div class="video-thumbnail">
+            <img class="yt-thumb"
+                 data-yt-id="{{ yt_id }}"
+                 alt="{{ video.name }}"
+                 loading="lazy">
+            <div class="video-play-overlay" aria-hidden="true">
+                <span class="video-play-icon">&#9654;</span>
+            </div>
+        </div>
+        <div class="video-info">
+            <div class="video-title">{{ video.name }}</div>
+            <div class="video-meta">
+                <span>{{ video.coach }}</span>
+                <span class="badge badge-info">{{ video.duration_min }} min</span>
+                <span class="badge badge-{{ video.intensity }}">{{ video.intensity }}</span>
+            </div>
+            <p class="text-dim text-sm mt-1 mb-2">{{ video.description }}</p>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+
+
+<!-- ── Video Player Modal ──────────────────────────────── -->
+<div class="video-player-overlay" id="videoPlayerOverlay">
+    <div class="video-player-container">
+        <div class="video-player-header">
+            <div class="video-player-title" id="playerTitle">—</div>
+            <div class="video-player-meta">
+                <span id="playerCoach"></span>
+                <span id="playerDuration"></span>
+            </div>
+            <button class="video-player-close" id="playerClose" title="Close (Esc)">✕</button>
+        </div>
+        <div class="video-player-wrapper" id="playerWrapper">
+            <!-- iframe injected on open -->
+        </div>
+        <div class="video-player-controls">
+            <div class="video-player-nav">
+                <button class="btn btn-secondary btn-sm" id="playerPrev" title="Previous">← Prev</button>
+                <button class="btn btn-secondary btn-sm" id="playerNext" title="Next">Next →</button>
+            </div>
+            <div class="video-player-volume">
+                <button id="playerMute" title="Mute">🔊</button>
+                <input type="range" id="playerVolume" min="0" max="100" value="80" step="1">
+            </div>
+            <button class="btn btn-secondary btn-sm" id="playerFullscreen" title="Fullscreen">⛶</button>
+            <button class="btn btn-secondary btn-sm" id="playerExternal" title="Open on YouTube">↗ YouTube</button>
+        </div>
+    </div>
+</div>
+
+
+<!-- ── Workout Prompt Modal ────────────────────────────────── -->
+<div class="workout-prompt-overlay" id="workoutPromptOverlay">
+    <div class="workout-prompt-card">
+        <div class="workout-prompt-icon">&#10003;</div>
+        <h3 class="workout-prompt-title">Workout Complete!</h3>
+        <p class="workout-prompt-body">
+            You watched <strong id="promptVideoName">this video</strong> to the end.
+            Would you like to log it as a workout for today?
+        </p>
+        <div class="workout-prompt-actions">
+            <button class="btn btn-secondary" id="promptNo">No, thanks</button>
+            <button class="btn btn-primary" id="promptYes">Yes, log it</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    // ── Load thumbnails with fallback chain ─────────────
+    var thumbQualities = ['maxresdefault', 'hqdefault', 'sddefault', 'default'];
+    document.querySelectorAll('.yt-thumb').forEach(function (img) {
+        var ytId = img.getAttribute('data-yt-id');
+        function tryQuality(i) {
+            if (i >= thumbQualities.length) {
+                // All failed — show emoji fallback
+                img.parentElement.innerHTML = '&#x1F3AC;';
+                return;
+            }
+            img.src = 'https://img.youtube.com/vi/' + ytId + '/' + thumbQualities[i] + '.jpg';
+            img.onerror = function () { tryQuality(i + 1); };
+        }
+        tryQuality(0);
+    });
+
+    // ── Collect video data from each card ────────────────
+    var cards = document.querySelectorAll('.video-card');
+    var videos = [];
+    cards.forEach(function (card) {
+        videos.push({
+            ytId: card.getAttribute('data-yt-id'),
+            title: card.getAttribute('data-title'),
+            coach: card.getAttribute('data-coach'),
+            duration: card.getAttribute('data-duration'),
+            intensity: card.getAttribute('data-intensity') || 'moderate',
+            url: card.getAttribute('data-url')
+        });
+    });
+
+    // ── DOM refs ──────────────────────────────────────────
+    var overlay = document.getElementById('videoPlayerOverlay');
+    var playerTitle = document.getElementById('playerTitle');
+    var playerCoach = document.getElementById('playerCoach');
+    var playerDuration = document.getElementById('playerDuration');
+    var playerWrapper = document.getElementById('playerWrapper');
+    var playerClose = document.getElementById('playerClose');
+    var playerPrev = document.getElementById('playerPrev');
+    var playerNext = document.getElementById('playerNext');
+    var playerMute = document.getElementById('playerMute');
+    var playerVolume = document.getElementById('playerVolume');
+    var playerFullscreen = document.getElementById('playerFullscreen');
+    var playerExternal = document.getElementById('playerExternal');
+
+    var promptOverlay = document.getElementById('workoutPromptOverlay');
+    var promptYes = document.getElementById('promptYes');
+    var promptNo = document.getElementById('promptNo');
+    var promptVideoName = document.getElementById('promptVideoName');
+
+    var currentIndex = -1;
+    var ytPlayer = null;
+    var ytApiReady = false;
+    var pendingOpenIndex = -1;
+
+    // Highest (currentTime / duration) ratio seen while this video played
+    var maxWatchedFraction = 0;
+    var progressTimer = null;
+
+    // ── YouTube IFrame API bootstrap ──────────────────────
+    // The API script (loaded in base.html) calls this when ready.
+    window.onYouTubeIframeAPIReady = function () {
+        ytApiReady = true;
+        if (pendingOpenIndex >= 0) {
+            var idx = pendingOpenIndex;
+            pendingOpenIndex = -1;
+            mountPlayer(idx);
+        }
+    };
+
+    function mountPlayer(index) {
+        if (!ytApiReady) {
+            pendingOpenIndex = index;
+            return;
+        }
+        var v = videos[index];
+
+        // Tear down any prior player
+        if (ytPlayer && typeof ytPlayer.destroy === 'function') {
+            try { ytPlayer.destroy(); } catch (e) {}
+        }
+        playerWrapper.innerHTML = '';
+
+        var mount = document.createElement('div');
+        mount.id = 'yt-player-mount';
+        playerWrapper.appendChild(mount);
+
+        ytPlayer = new YT.Player('yt-player-mount', {
+            videoId: v.ytId,
+            playerVars: {
+                autoplay: 1,
+                rel: 0,
+                iv_load_policy: 3,
+                cc_load_policy: 0,
+                playsinline: 1,
+                modestbranding: 1
+            },
+            events: {
+                onReady: function () {
+                    // Sync UI to current player volume state
+                    try {
+                        var vol = ytPlayer.getVolume();
+                        playerVolume.value = vol;
+                        playerMute.textContent = ytPlayer.isMuted() ? '\u{1F507}' : '\u{1F50A}';
+                    } catch (e) {}
+                },
+                onStateChange: function (event) {
+                    // YT.PlayerState: -1 unstarted, 0 ended, 1 playing,
+                    //                  2 paused, 3 buffering, 5 cued
+                    if (event.data === 1) {
+                        startProgressPolling();
+                    } else if (event.data === 0) {
+                        // Video reached the end → treat as fully watched
+                        maxWatchedFraction = 1;
+                        stopProgressPolling();
+                    } else if (event.data === 2 || event.data === -1) {
+                        stopProgressPolling();
+                    }
+                }
+            }
+        });
+    }
+
+    function startProgressPolling() {
+        stopProgressPolling();
+        progressTimer = setInterval(function () {
+            if (!ytPlayer || typeof ytPlayer.getCurrentTime !== 'function') return;
+            try {
+                var cur = ytPlayer.getCurrentTime();
+                var dur = ytPlayer.getDuration();
+                if (typeof cur === 'number' && typeof dur === 'number' && dur > 0) {
+                    var frac = cur / dur;
+                    if (frac > maxWatchedFraction) maxWatchedFraction = frac;
+                }
+            } catch (e) { /* player not ready yet */ }
+        }, 1000);
+    }
+
+    function stopProgressPolling() {
+        if (progressTimer) {
+            clearInterval(progressTimer);
+            progressTimer = null;
+        }
+    }
+
+    // ── Open player ───────────────────────────────────────
+    function openPlayer(index) {
+        if (index < 0 || index >= videos.length) return;
+        currentIndex = index;
+        var v = videos[index];
+
+        playerTitle.textContent = v.title;
+        playerCoach.textContent = v.coach;
+        playerDuration.textContent = v.duration + ' min';
+
+        overlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
+
+        maxWatchedFraction = 0;
+        mountPlayer(index);
+    }
+
+    // ── Load next/prev ────────────────────────────────────
+    function loadVideo(index) {
+        if (index < 0 || index >= videos.length) return;
+        currentIndex = index;
+        var v = videos[index];
+        playerTitle.textContent = v.title;
+        playerCoach.textContent = v.coach;
+        playerDuration.textContent = v.duration + ' min';
+
+        maxWatchedFraction = 0;
+        if (ytPlayer && typeof ytPlayer.loadVideoById === 'function') {
+            ytPlayer.loadVideoById(v.ytId);
+        } else {
+            mountPlayer(index);
+        }
+    }
+
+    // Holds the candidate workout to log if the user clicks Yes.
+    var pendingWorkout = null;
+
+    // ── Close player ──────────────────────────────────────
+    // If the user watched >= 80% of the video, intercept the close
+    // and surface the "log this workout?" prompt instead.
+    function closePlayer() {
+        stopProgressPolling();
+        var watchedEnough = maxWatchedFraction >= 0.80;
+        var v = (currentIndex >= 0) ? videos[currentIndex] : null;
+
+        // Tear down the player either way
+        if (ytPlayer && typeof ytPlayer.destroy === 'function') {
+            try { ytPlayer.destroy(); } catch (e) {}
+        }
+        ytPlayer = null;
+        playerWrapper.innerHTML = '';
+        overlay.classList.remove('active');
+
+        if (watchedEnough && v) {
+            pendingWorkout = {
+                duration_min: parseInt(v.duration, 10) || 0,
+                video_name: v.title || '',
+                workout_type: (v.title || '').toLowerCase().indexOf('tabata') >= 0 ? 'tabata' : 'hiit',
+                intensity: v.intensity || 'moderate'
+            };
+            promptVideoName.textContent = v.title || 'this video';
+            promptYes.disabled = false;
+            promptYes.textContent = 'Yes, log it';
+            promptNo.disabled = false;
+            promptOverlay.classList.add('active');
+            return; // leave body scroll locked, currentIndex set
+        }
+
+        document.body.style.overflow = '';
+        currentIndex = -1;
+        maxWatchedFraction = 0;
+    }
+
+    function dismissPrompt() {
+        promptOverlay.classList.remove('active');
+        document.body.style.overflow = '';
+        currentIndex = -1;
+        maxWatchedFraction = 0;
+        pendingWorkout = null;
+    }
+
+    promptNo.addEventListener('click', function () { dismissPrompt(); });
+    promptOverlay.addEventListener('click', function (e) {
+        if (e.target === promptOverlay) dismissPrompt();
+    });
+
+    promptYes.addEventListener('click', function () {
+        if (!pendingWorkout) return;
+        promptYes.disabled = true;
+        promptYes.textContent = 'Logging\u2026';
+        fetch('/api/record-video-workout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify(pendingWorkout)
+        })
+        .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+        .then(function (res) {
+            if (res.ok && res.j.ok) {
+                promptYes.textContent = '\u2713 Logged!';
+                setTimeout(function () { dismissPrompt(); }, 700);
+            } else {
+                promptYes.disabled = false;
+                promptYes.textContent = 'Yes, log it';
+                alert('Could not log workout: ' + (res.j && res.j.error ? res.j.error : 'unknown error'));
+            }
+        })
+        .catch(function (err) {
+            promptYes.disabled = false;
+            promptYes.textContent = 'Yes, log it';
+            alert('Network error: ' + err.message);
+        });
+    });
+
+    // ── Event: Click anywhere on a card to play ──────────
+    cards.forEach(function (card, i) {
+        card.addEventListener('click', function () {
+            openPlayer(i);
+        });
+        card.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                openPlayer(i);
+            }
+        });
+    });
+
+    // ── Event: Close ──────────────────────────────────────
+    playerClose.addEventListener('click', closePlayer);
+    overlay.addEventListener('click', function (e) {
+        if (e.target === overlay) closePlayer();
+    });
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && overlay.classList.contains('active')) {
+            closePlayer();
+        }
+    });
+
+    // ── Event: Prev / Next ────────────────────────────────
+    playerPrev.addEventListener('click', function () {
+        if (currentIndex > 0) loadVideo(currentIndex - 1);
+    });
+    playerNext.addEventListener('click', function () {
+        if (currentIndex < videos.length - 1) loadVideo(currentIndex + 1);
+    });
+
+    // ── Event: Volume / Mute (now via YT.Player directly) ─
+    playerVolume.addEventListener('input', function () {
+        var vol = parseInt(playerVolume.value);
+        if (ytPlayer && typeof ytPlayer.setVolume === 'function') {
+            try { ytPlayer.setVolume(vol); } catch (e) {}
+        }
+        playerMute.textContent = vol === 0 ? '\u{1F507}' : '\u{1F50A}';
+    });
+    playerMute.addEventListener('click', function () {
+        if (!ytPlayer || typeof ytPlayer.mute !== 'function') return;
+        try {
+            if (ytPlayer.isMuted()) {
+                ytPlayer.unMute();
+                playerMute.textContent = '\u{1F50A}';
+            } else {
+                ytPlayer.mute();
+                playerMute.textContent = '\u{1F507}';
+            }
+        } catch (e) {}
+    });
+
+    // ── Event: Fullscreen ─────────────────────────────────
+    playerFullscreen.addEventListener('click', function () {
+        var container = document.querySelector('.video-player-container');
+        if (!document.fullscreenElement) {
+            (container.requestFullscreen || container.webkitRequestFullscreen || container.msRequestFullscreen).call(container);
+        } else {
+            (document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen).call(document);
+        }
+    });
+
+    // ── Event: Open on YouTube ────────────────────────────
+    playerExternal.addEventListener('click', function () {
+        if (currentIndex >= 0) {
+            window.open(videos[currentIndex].url, '_blank', 'noopener');
+        }
+    });
+
+    // ── Filter Tabs ───────────────────────────────────────
+    var tabs = document.querySelectorAll('.filter-tab');
+
+    tabs.forEach(function (tab) {
+        tab.addEventListener('click', function () {
+            tabs.forEach(function (t) { t.classList.remove('active'); });
+            tab.classList.add('active');
+
+            var filter = tab.getAttribute('data-filter');
+
+            // Show/hide prolapse disclaimer
+            var disclaimer = document.getElementById('prolapseDisclaimer');
+            if (disclaimer) {
+                disclaimer.style.display = filter === 'prolapse' ? '' : 'none';
+            }
+
+            cards.forEach(function (card) {
+                if (filter === 'all' || card.getAttribute('data-category') === filter) {
+                    card.style.display = '';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        });
+    });
+})();
+</script>
+{% endblock %}

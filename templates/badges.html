@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Achievement Badges — MaxiFitness{% endblock %}
+
+{% block content %}
+<div class="dashboard-welcome">
+    <div>
+        <h1>🎆 Achievement Badges</h1>
+        <p>{{ total_earned }} of {{ total_badges }} badges earned</p>
+    </div>
+</div>
+
+<!-- ── Overall Progress ──────────────────────────────────────── -->
+<div class="card">
+    <div class="card-header">
+        <h3>Collection Progress</h3>
+    </div>
+    <div class="badge-overall-progress">
+        <div class="badge-progress-bar">
+            <div class="badge-progress-fill" style="width: {{ (total_earned / total_badges * 100) if total_badges > 0 else 0 }}%"></div>
+        </div>
+        <span class="text-sm text-dim">{{ total_earned }}/{{ total_badges }} badges</span>
+    </div>
+</div>
+
+<!-- ── Badge Categories ──────────────────────────────────────── -->
+{% set categories = {'workout': '🏋️ Workout', 'weight': '⚖️ Weight', 'consistency': '🔥 Consistency', 'milestone': '🏁 Milestone'} %}
+{% set category_order = ['workout', 'weight', 'consistency', 'milestone'] %}
+
+{% for cat in category_order %}
+{% set cat_badges = badges | selectattr('category', 'equalto', cat) | list %}
+{% if cat_badges %}
+<div class="card">
+    <div class="card-header">
+        <h3>{{ categories.get(cat, cat | capitalize) }}</h3>
+        <span class="text-dim text-sm">{{ cat_badges | selectattr('earned') | list | length }}/{{ cat_badges | length }} earned</span>
+    </div>
+    <div class="badge-grid">
+        {% for b in cat_badges %}
+        <div class="badge-card {{ 'badge-earned' if b.earned else 'badge-locked' }}">
+            <div class="badge-icon-wrap tier-{{ b.tier }}">
+                <span class="badge-icon">{{ b.icon }}</span>
+                {% if b.earned %}
+                <span class="badge-check">&#x2713;</span>
+                {% endif %}
+            </div>
+            <div class="badge-details">
+                <span class="badge-name">{{ b.name }}</span>
+                <span class="badge-desc">{{ b.description }}</span>
+                {% if not b.earned %}
+                <div class="badge-progress-mini">
+                    <div class="badge-progress-bar-mini">
+                        <div class="badge-progress-fill-mini" style="width: {{ b.pct }}%"></div>
+                    </div>
+                    <span class="badge-progress-text">{{ b.progress }}/{{ b.target }}</span>
+                </div>
+                {% else %}
+                <span class="badge-earned-date">Earned {{ b.earned_at[:10] if b.earned_at else '' }}</span>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endfor %}
+{% endblock %}

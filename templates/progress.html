@@ -1,0 +1,828 @@
+{% extends "base.html" %}
+
+{% block title %}Progress — MaxiFitness{% endblock %}
+
+{% block content %}
+<!-- ── Weekly Weigh-In ──────────────────────────────────── -->
+<div class="card mb-3" id="weighinCard">
+    <div class="card-header">
+        <h2>&#x2696; Weekly Weigh-In</h2>
+        <span class="text-sm text-dim" id="weighinDayLabel">Weigh-in day: {{ weighin_day_name }}</span>
+    </div>
+    <div class="weighin-form-body">
+        <div id="milestoneCard" class="milestone-celebration" style="display:none;">
+            <div class="milestone-icon">&#x1F389;</div>
+            <div class="milestone-text" id="milestoneMessage"></div>
+        </div>
+        <div id="weighinFeedback" class="text-sm text-dim mt-1" style="display:none;"></div>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="weeklyWeight">Weight ({{ settings.get('unit', 'lbs') }})</label>
+                <input type="number" id="weeklyWeight" step="0.1"
+                       placeholder="e.g. 182.5"
+                       {% if not weighin_is_today %}disabled{% endif %}>
+            </div>
+            <div class="form-group">
+                <label for="weeklyNotes">Notes (optional)</label>
+                <input type="text" id="weeklyNotes" placeholder="How do you feel?">
+            </div>
+        </div>
+        <button id="saveWeighin" class="btn btn-primary"
+                {% if not weighin_is_today %}disabled{% endif %}>
+            {% if weighin_is_today %}Log Weigh-In{% else %}Weigh-In Day: {{ weighin_day_name }}{% endif %}
+        </button>
+        <span id="weighinStatus" class="text-sm text-dim ml-2"></span>
+    </div>
+</div>
+
+<!-- ── Weekly Weight Trend ──────────────────────────────── -->
+<div class="card mb-3">
+    <div class="card-header">
+        <h2>Weekly Weight Trend</h2>
+        <span class="text-sm text-dim">Solid line = 4-week trend &middot; Dotted = actual weigh-ins</span>
+    </div>
+    <div class="chart-container">
+        <canvas id="weeklyWeightChart"></canvas>
+    </div>
+</div>
+
+<!-- ── Log Measurements ──────────────────────────────────── -->
+<div class="card mb-3">
+    <div class="card-header"><h2>Log Measurements</h2></div>
+    <form method="POST" action="/progress">
+        <div class="form-row">
+            <div class="form-group">
+                <label for="date">Date</label>
+                <input type="date" id="date" name="date" value="" required>
+            </div>
+        </div>
+        <!-- Weight & HR — always visible -->
+        <div class="form-section expanded">
+            <button type="button" class="form-section-toggle" aria-expanded="true">
+                <span class="form-section-title">Weight &amp; HR</span>
+                <span class="form-section-chevron">▾</span>
+            </button>
+            <div class="form-section-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="weight">Weight ({{ unit|default("lbs") }})</label>
+                        <input type="number" id="weight" name="weight" step="0.1" placeholder="e.g. 185.5">
+                    </div>
+                    <div class="form-group">
+                        <label for="resting_hr">Resting HR</label>
+                        <input type="number" id="resting_hr" name="resting_hr" placeholder="e.g. 62">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Upper Body — collapsed on mobile -->
+        <div class="form-section collapsed mobile-collapse">
+            <button type="button" class="form-section-toggle" aria-expanded="false">
+                <span class="form-section-title">Upper Body</span>
+                <span class="form-section-chevron">▸</span>
+            </button>
+            <div class="form-section-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="waist">Waist (in)</label>
+                        <input type="number" id="waist" name="waist" step="0.1" placeholder="e.g. 34.0">
+                    </div>
+                    <div class="form-group">
+                        <label for="hips">Hips (in)</label>
+                        <input type="number" id="hips" name="hips" step="0.1" placeholder="e.g. 39.0">
+                    </div>
+                    <div class="form-group">
+                        <label for="chest">Chest (in)</label>
+                        <input type="number" id="chest" name="chest" step="0.1" placeholder="e.g. 42.0">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="left_arm">Left Arm (in)</label>
+                        <input type="number" id="left_arm" name="left_arm" step="0.1" placeholder="e.g. 14.0">
+                    </div>
+                    <div class="form-group">
+                        <label for="right_arm">Right Arm (in)</label>
+                        <input type="number" id="right_arm" name="right_arm" step="0.1" placeholder="e.g. 14.2">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Lower Body — collapsed on mobile -->
+        <div class="form-section collapsed mobile-collapse">
+            <button type="button" class="form-section-toggle" aria-expanded="false">
+                <span class="form-section-title">Lower Body</span>
+                <span class="form-section-chevron">▸</span>
+            </button>
+            <div class="form-section-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="left_thigh">Left Thigh (in)</label>
+                        <input type="number" id="left_thigh" name="left_thigh" step="0.1" placeholder="e.g. 23.0">
+                    </div>
+                    <div class="form-group">
+                        <label for="right_thigh">Right Thigh (in)</label>
+                        <input type="number" id="right_thigh" name="right_thigh" step="0.1" placeholder="e.g. 23.1">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="notes">Notes</label>
+            <textarea id="notes" name="notes" rows="2" placeholder="How do you feel? Any observations…"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Save Measurements</button>
+    </form>
+</div>
+
+<!-- ── Weight Trend Chart ───────────────────────────────── -->
+<div class="card mb-3">
+    <div class="card-header"><h2>Weight Trend</h2></div>
+    <div class="chart-container">
+        <canvas id="weightChart"></canvas>
+    </div>
+</div>
+
+<!-- ── Measurements History ─────────────────────────────── -->
+<div class="card mb-3">
+    <div class="card-header"><h2>Measurements History</h2></div>
+    {% if metrics %}
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Weight</th>
+                    <th>Waist</th>
+                    <th>Hips</th>
+                    <th>Chest</th>
+                    <th>Arms</th>
+                    <th>Thighs</th>
+                    <th>Resting HR</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for m in metrics %}
+                <tr>
+                    <td>{{ m.date }}</td>
+                    <td>{{ m.weight|round(1) if m.weight is not none else '—' }}</td>
+                    <td>{{ m.waist|round(1) if m.waist is not none else '—' }}</td>
+                    <td>{{ m.hips|round(1) if m.hips is not none else '—' }}</td>
+                    <td>{{ m.chest|round(1) if m.chest is not none else '—' }}</td>
+                    <td>
+                        {% if m.left_arm or m.right_arm %}
+                            {{ m.left_arm|round(1)|default("—") }} / {{ m.right_arm|round(1)|default("—") }}
+                        {% else %}—{% endif %}
+                    </td>
+                    <td>
+                        {% if m.left_thigh or m.right_thigh %}
+                            {{ m.left_thigh|round(1)|default("—") }} / {{ m.right_thigh|round(1)|default("—") }}
+                        {% else %}—{% endif %}
+                    </td>
+                    <td>{{ m.resting_hr|default("—") }}</td>
+                    <td class="text-dim">{{ m.notes|default("") }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="text-center text-dim" style="padding: 2rem 1rem;">
+        Log your first measurement above to start tracking!
+    </div>
+    {% endif %}
+</div>
+
+<!-- ── Settings ─────────────────────────────────────────── -->
+<div class="card mb-3">
+    <div class="card-header"><h2>Settings</h2></div>
+    <div id="settings-form">
+        <div class="form-group">
+            <label for="weighinDaySelect">Weigh-In Day</label>
+            <select id="weighinDaySelect">
+                <option value="0">Monday</option>
+                <option value="1">Tuesday</option>
+                <option value="2">Wednesday</option>
+                <option value="3">Thursday</option>
+                <option value="4">Friday</option>
+                <option value="5">Saturday</option>
+                <option value="6">Sunday</option>
+            </select>
+            <span class="text-sm text-dim ml-2" id="weighinDayStatus"></span>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="settings-start-weight">Start Weight ({{ unit|default("lbs") }})</label>
+                <input type="number" id="settings-start-weight" step="0.1" value="—">
+            </div>
+            <div class="form-group">
+                <label for="settings-goal-weight">Goal Weight ({{ unit|default("lbs") }})</label>
+                <input type="number" id="settings-goal-weight" step="0.1" value="—">
+            </div>
+        </div>
+        <button type="button" id="save-settings" class="btn btn-primary">Save Settings</button>
+        <span id="settings-status" class="text-sm text-dim ml-2"></span>
+    </div>
+</div>
+
+<!-- ── Upload Progress Photo ──────────────────────────────── -->
+<div class="card mb-3">
+    <div class="card-header"><h2>Upload Progress Photo</h2></div>
+    <form method="POST" action="/progress/photos/upload" enctype="multipart/form-data">
+        <div class="form-row">
+            <div class="form-group">
+                <label for="photo-date">Date</label>
+                <input type="date" id="photo-date" name="date" value="{{ today|default('') }}" required>
+            </div>
+            <div class="form-group">
+                <label for="photo-angle">Angle</label>
+                <select id="photo-angle" name="angle" required>
+                    <option value="front">Front</option>
+                    <option value="side">Side</option>
+                    <option value="back">Back</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="photo-file">Photo</label>
+            <div class="file-upload-area" id="file-upload-area">
+                <input type="file" id="photo-file" name="photo" accept="image/jpeg,image/png,image/webp" required>
+                <div class="file-upload-preview" id="file-preview"></div>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="photo-notes">Notes (optional)</label>
+            <input type="text" id="photo-notes" name="notes" placeholder="e.g. Morning light, same outfit as last time">
+        </div>
+        <button type="submit" class="btn btn-primary">Upload Photo</button>
+    </form>
+</div>
+
+<!-- ── Photo Timeline ─────────────────────────────────────── -->
+<div class="card mb-3">
+    <div class="card-header">
+        <h2>Photo Timeline</h2>
+        {% if photos %}
+        <button class="btn btn-sm btn-secondary" id="btn-compare-mode">Compare Photos</button>
+        {% endif %}
+    </div>
+    {% if photos %}
+    <div class="photo-timeline">
+        {% for photo in photos %}
+        <div class="photo-entry" data-id="{{ photo.id }}" data-date="{{ photo.date }}" data-angle="{{ photo.angle }}">
+            <div class="photo-meta">
+                <span class="photo-date">{{ photo.date }}</span>
+                <span class="badge badge-info">{{ photo.angle }}</span>
+            </div>
+            <a href="{{ photo.file_path }}" class="photo-thumb" data-thumb="{{ photo.thumbnail_path }}">
+                <img src="{{ photo.thumbnail_path }}" alt="{{ photo.angle }} - {{ photo.date }}" loading="lazy">
+            </a>
+            {% if photo.notes %}
+            <div class="photo-notes text-dim">{{ photo.notes }}</div>
+            {% endif %}
+            <form method="POST" action="/progress/photos/{{ photo.id }}/delete" class="photo-delete-form">
+                <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Delete this photo?')">Delete</button>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center text-dim" style="padding: 2rem 1rem;">
+        Upload your first progress photo above to start tracking!
+    </div>
+    {% endif %}
+</div>
+
+<!-- ── Photo Comparison Modal ─────────────────────────────── -->
+<div class="photo-compare-overlay" id="photo-compare-overlay">
+    <div class="photo-compare-container">
+        <div class="photo-compare-header">
+            <h3>Before &amp; After</h3>
+            <button class="photo-compare-close" id="photo-compare-close">&times;</button>
+        </div>
+        <div class="photo-compare-selectors">
+            <div class="form-group">
+                <label>Before</label>
+                <select id="compare-before"></select>
+            </div>
+            <div class="form-group">
+                <label>After</label>
+                <select id="compare-after"></select>
+            </div>
+            <button class="btn btn-primary" id="compare-go">Compare</button>
+        </div>
+        <div class="photo-compare-slider" id="photo-compare-slider">
+            <div class="photo-compare-image photo-compare-after" id="compare-after-img"></div>
+            <div class="photo-compare-image photo-compare-before" id="compare-before-img">
+                <div class="photo-compare-handle" id="compare-handle">
+                    <span class="photo-compare-handle-line"></span>
+                </div>
+            </div>
+        </div>
+        <div class="photo-compare-labels">
+            <span id="compare-before-label"></span>
+            <span id="compare-after-label"></span>
+        </div>
+    </div>
+</div>
+
+<!-- ── Wellness Log ───────────────────────────────────────── -->
+<div class="card mb-3">
+    <div class="card-header"><h2>Wellness Check-In</h2></div>
+    <form method="POST" action="/progress/wellness">
+        <div class="form-row">
+            <div class="form-group">
+                <label for="wellness-date">Date</label>
+                <input type="date" id="wellness-date" name="date" value="{{ today|default('') }}" required>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Energy Level</label>
+                <div class="rating-group" data-name="energy">
+                    <label class="rating-item" title="Very Low"><input type="radio" name="energy" value="1"><span>&#x1F62B;</span></label>
+                    <label class="rating-item" title="Low"><input type="radio" name="energy" value="2"><span>&#x1F615;</span></label>
+                    <label class="rating-item" title="Okay"><input type="radio" name="energy" value="3"><span>&#x1F610;</span></label>
+                    <label class="rating-item" title="Good"><input type="radio" name="energy" value="4"><span>&#x1F60A;</span></label>
+                    <label class="rating-item" title="Great"><input type="radio" name="energy" value="5"><span>&#x1F525;</span></label>
+                </div>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Mood</label>
+                <div class="rating-group" data-name="mood">
+                    <label class="rating-item" title="Terrible"><input type="radio" name="mood" value="1"><span>&#x1F622;</span></label>
+                    <label class="rating-item" title="Down"><input type="radio" name="mood" value="2"><span>&#x1F614;</span></label>
+                    <label class="rating-item" title="Neutral"><input type="radio" name="mood" value="3"><span>&#x1F610;</span></label>
+                    <label class="rating-item" title="Good"><input type="radio" name="mood" value="4"><span>&#x1F642;</span></label>
+                    <label class="rating-item" title="Amazing"><input type="radio" name="mood" value="5"><span>&#x1F929;</span></label>
+                </div>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Sleep Quality</label>
+                <div class="rating-group" data-name="sleep">
+                    <label class="rating-item" title="Awful"><input type="radio" name="sleep" value="1"><span>&#x1F635;</span></label>
+                    <label class="rating-item" title="Poor"><input type="radio" name="sleep" value="2"><span>&#x1F634;</span></label>
+                    <label class="rating-item" title="Okay"><input type="radio" name="sleep" value="3"><span>&#x1F62A;</span></label>
+                    <label class="rating-item" title="Good"><input type="radio" name="sleep" value="4"><span>&#x1F60C;</span></label>
+                    <label class="rating-item" title="Rested"><input type="radio" name="sleep" value="5"><span>&#x1F4AA;</span></label>
+                </div>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="clothing_fit">Clothing Fit</label>
+                <select id="clothing_fit" name="clothing_fit">
+                    <option value="">— Select —</option>
+                    <option value="tight">Tight</option>
+                    <option value="fitting">Fitting</option>
+                    <option value="loose">Loose</option>
+                    <option value="very_loose">Very Loose</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="wellness-notes">Notes</label>
+            <textarea id="wellness-notes" name="notes" rows="2" placeholder="How are you feeling overall? Any non-scale wins?"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Save Check-In</button>
+    </form>
+</div>
+
+<!-- ── Wellness History ───────────────────────────────────── -->
+<div class="card mb-3">
+    <div class="card-header"><h2>Wellness History</h2></div>
+    {% if wellness %}
+    <div class="wellness-timeline">
+        {% for w in wellness %}
+        <div class="wellness-entry">
+            <div class="wellness-date">{{ w.date }}</div>
+            <div class="wellness-scores">
+                <span class="wellness-score" title="Energy: {{ w.energy }}/5">
+                    {% if w.energy %}{{ ['&#x1F62B;','&#x1F615;','&#x1F610;','&#x1F60A;','&#x1F525;'][w.energy|int-1] }}{% else %}—{% endif %}
+                </span>
+                <span class="wellness-score" title="Mood: {{ w.mood }}/5">
+                    {% if w.mood %}{{ ['&#x1F622;','&#x1F614;','&#x1F610;','&#x1F642;','&#x1F929;'][w.mood|int-1] }}{% else %}—{% endif %}
+                </span>
+                <span class="wellness-score" title="Sleep: {{ w.sleep }}/5">
+                    {% if w.sleep %}{{ ['&#x1F635;','&#x1F634;','&#x1F62A;','&#x1F60C;','&#x1F4AA;'][w.sleep|int-1] }}{% else %}—{% endif %}
+                </span>
+                {% if w.clothing_fit %}
+                <span class="badge badge-info">{{ w.clothing_fit|replace('_',' ') }}</span>
+                {% endif %}
+            </div>
+            {% if w.notes %}
+            <div class="wellness-notes text-dim">{{ w.notes }}</div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center text-dim" style="padding: 2rem 1rem;">
+        Fill out the wellness check-in above to start tracking!
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Shared Chart.js defaults ────────────────────────────
+Chart.defaults.color = '#94a3b8';
+Chart.defaults.borderColor = 'rgba(148,163,184,0.08)';
+Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
+
+// ── Default date to today ───────────────────────────────
+(function () {
+    var dateInput = document.getElementById("date");
+    if (dateInput && !dateInput.value) {
+        dateInput.value = new Date().toISOString().split("T")[0];
+    }
+})();
+
+// ── Weight Chart ──────────────────────────────────────────
+(function () {
+    fetch("/api/weight-chart")
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            var ctx = document.getElementById("weightChart").getContext("2d");
+            new Chart(ctx, {
+                type: "line",
+                data: {
+                    labels: data.map(function (d) { return d.date; }),
+                    datasets: [{
+                        label: "Weight",
+                        data: data.map(function (d) { return d.weight; }),
+                        borderColor: "#ef4444",
+                        backgroundColor: "rgba(239, 68, 68, 0.1)",
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 3,
+                        pointHoverRadius: 5,
+                        pointBackgroundColor: "#ef4444",
+                        borderWidth: 2,
+                        },
+                    }]
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: "#94a3b8" },
+                            grid: { color: "rgba(148,163,184,0.08)" }
+                        },
+                        y: {
+                            ticks: { color: "#94a3b8" },
+                            grid: { color: "rgba(148,163,184,0.08)" }
+                        }
+                    }
+                }
+            });
+        })
+        .catch(function (err) { console.error("Weight chart load failed:", err); });
+})();
+
+// ── Settings ──────────────────────────────────────────────
+(function () {
+    var startInput = document.getElementById("settings-start-weight");
+    var goalInput = document.getElementById("settings-goal-weight");
+    var saveBtn = document.getElementById("save-settings");
+    var status = document.getElementById("settings-status");
+    var _savedUnit, _savedDate;
+    // Load current settings
+    fetch("/api/settings")
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (data.start_weight != null) startInput.value = data.start_weight;
+            if (data.goal_weight != null) goalInput.value = data.goal_weight;
+            _savedUnit = data.unit || "lbs";
+            _savedDate = data.start_date || new Date().toISOString().split("T")[0];
+        })
+        .catch(function (err) { console.error("Settings load failed:", err); });
+
+    // Save settings
+    saveBtn.addEventListener("click", function () {
+        var payload = {
+            id: 1,
+            start_weight: startInput.value ? parseFloat(startInput.value) : null,
+            goal_weight: goalInput.value ? parseFloat(goalInput.value) : null,
+            unit: _savedUnit,
+            start_date: _savedDate
+        };
+
+        saveBtn.disabled = true;
+        saveBtn.textContent = "Saving…";
+
+        fetch("/api/settings", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (data.ok) {
+                status.textContent = "✓ Saved";
+                status.className = "text-sm text-success ml-2";
+                setTimeout(function () {
+                    status.textContent = "";
+                    status.className = "text-sm text-dim ml-2";
+                }, 2000);
+            }
+        })
+        .catch(function (err) {
+            status.textContent = "✗ Error";
+            status.className = "text-sm text-danger ml-2";
+        })
+        .finally(function () {
+            saveBtn.disabled = false;
+            saveBtn.textContent = "Save Settings";
+        });
+    });
+})();
+
+// ── Weekly Weight Chart ───────────────────────────────────
+(function () {
+    fetch('/api/weekly-chart')
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (data.length < 2) return;
+            var ctx = document.getElementById('weeklyWeightChart');
+            if (!ctx) return;
+            new Chart(ctx.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: data.map(function (d) { return d.date; }),
+                    datasets: [
+                        {
+                            label: 'Trend (4-week EMA)',
+                            data: data.map(function (d) { return d.ema; }),
+                            borderColor: '#ef4444',
+                            backgroundColor: 'rgba(239,68,68,0.1)',
+                            fill: true, tension: 0.4,
+                            pointRadius: 4, pointHoverRadius: 6,
+                            pointBackgroundColor: '#ef4444', borderWidth: 2.5,
+                        },
+                        {
+                            label: 'Weekly',
+                            data: data.map(function (d) { return d.weight; }),
+                            borderColor: 'rgba(148,163,184,0.4)',
+                            backgroundColor: 'transparent',
+                            borderDash: [5, 3], tension: 0.1,
+                            pointRadius: 3, pointHoverRadius: 5,
+                            pointBackgroundColor: 'rgba(148,163,184,0.6)',
+                            borderWidth: 1.5,
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: true, position: 'top',
+                            labels: { color: '#94a3b8', usePointStyle: true } },
+                        tooltip: {
+                            backgroundColor: 'rgba(22,27,44,0.95)',
+                            borderColor: 'rgba(255,255,255,0.06)', borderWidth: 1,
+                            titleColor: '#e2e8f0', bodyColor: '#94a3b8',
+                            callbacks: {
+                                afterBody: function (items) {
+                                    var idx = items[0].dataIndex;
+                                    if (idx > 0) {
+                                        var change = (data[idx].weight - data[idx - 1].weight).toFixed(1);
+                                        return 'Change: ' + (change > 0 ? '+' : '') + change + ' lbs';
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { ticks: { color: '#94a3b8', maxTicksLimit: 12 },
+                             grid: { color: 'rgba(148,163,184,0.08)' } },
+                        y: { ticks: { color: '#94a3b8' },
+                             grid: { color: 'rgba(148,163,184,0.08)' } }
+                    }
+                }
+            });
+        })
+        .catch(function (err) { console.error('Weekly chart failed:', err); });
+})();
+
+// ── Weekly Weigh-In Submission ────────────────────────────
+(function () {
+    var weightInput = document.getElementById('weeklyWeight');
+    var notesInput = document.getElementById('weeklyNotes');
+    var saveBtn = document.getElementById('saveWeighin');
+    var status = document.getElementById('weighinStatus');
+    var feedback = document.getElementById('weighinFeedback');
+    var milestoneCard = document.getElementById('milestoneCard');
+    var milestoneMsg = document.getElementById('milestoneMessage');
+    if (!saveBtn || saveBtn.disabled) return;
+    saveBtn.addEventListener('click', function () {
+        var weight = parseFloat(weightInput.value);
+        if (!weight || weight <= 0) {
+            status.textContent = 'Enter a valid weight';
+            status.className = 'text-sm text-danger ml-2';
+            return;
+        }
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Saving...';
+        fetch('/api/weekly-weighin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ weight: weight, notes: notesInput.value || '' })
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (data.ok) {
+                if (data.feedback) {
+                    feedback.textContent = data.feedback;
+                    feedback.style.display = 'block';
+                }
+                if (data.milestones && data.milestones.length > 0) {
+                    var m = data.milestones[0];
+                    milestoneMsg.textContent = m.message;
+                    milestoneCard.style.display = 'block';
+                }
+                status.textContent = '\u2713 Weigh-in saved';
+                status.className = 'text-sm text-success ml-2';
+                weightInput.disabled = true;
+                notesInput.disabled = true;
+                saveBtn.textContent = 'Logged \u2713';
+                setTimeout(function() { location.reload(); }, 2000);
+            }
+        })
+        .catch(function (err) {
+            status.textContent = '\u2717 Error';
+            status.className = 'text-sm text-danger ml-2';
+            saveBtn.disabled = false;
+            saveBtn.textContent = 'Log Weigh-In';
+        });
+    });
+})();
+
+// ── Weigh-In Day Selector ─────────────────────────────────
+(function () {
+    var select = document.getElementById('weighinDaySelect');
+    var status = document.getElementById('weighinDayStatus');
+    if (!select) return;
+    fetch('/api/weighin-status')
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (data.weighin_day != null) select.value = data.weighin_day;
+        });
+    select.addEventListener('change', function () {
+        fetch('/api/weighin-day', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ weighin_day: parseInt(select.value) })
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (data.ok) {
+                status.textContent = '\u2713 Saved';
+                status.className = 'text-sm text-success ml-2';
+                setTimeout(function () {
+                    status.textContent = '';
+                    status.className = 'text-sm text-dim ml-2';
+                }, 2000);
+            }
+        })
+        .catch(function (err) {
+            status.textContent = '\u2717 Error';
+            status.className = 'text-sm text-danger ml-2';
+        });
+    });
+})();
+
+// ── File Preview on Select ─────────────────────────────
+(function () {
+    var fileInput = document.getElementById('photo-file');
+    if (!fileInput) return;
+    fileInput.addEventListener('change', function(e) {
+        var preview = document.getElementById('file-preview');
+        preview.innerHTML = '';
+        var file = e.target.files[0];
+        if (!file) return;
+        if (file.size > 10 * 1024 * 1024) {
+            alert('File too large. Maximum 10 MB.');
+            this.value = '';
+            return;
+        }
+        var reader = new FileReader();
+        reader.onload = function(ev) {
+            var img = document.createElement('img');
+            img.src = ev.target.result;
+            preview.appendChild(img);
+        };
+        reader.readAsDataURL(file);
+    });
+})();
+
+// ── Default date for photo/wellness forms ───────────────
+(function () {
+    var today = new Date().toISOString().split('T')[0];
+    var pd = document.getElementById('photo-date');
+    if (pd && !pd.value) pd.value = today;
+    var wd = document.getElementById('wellness-date');
+    if (wd && !wd.value) wd.value = today;
+})();
+
+// ── Photo Comparison Slider ─────────────────────────────
+(function () {
+    var overlay = document.getElementById('photo-compare-overlay');
+    if (!overlay) return;
+    var closeBtn = document.getElementById('photo-compare-close');
+    var btnCompare = document.getElementById('btn-compare-mode');
+    var uid = {{ session.get('user_id') or 'null' }};
+
+    if (btnCompare) {
+        btnCompare.addEventListener('click', function() {
+            fetch('/api/photos/' + uid)
+                .then(function(r) { return r.json(); })
+                .then(function(photos) {
+                    var beforeSel = document.getElementById('compare-before');
+                    var afterSel = document.getElementById('compare-after');
+                    beforeSel.innerHTML = '';
+                    afterSel.innerHTML = '';
+                    photos.forEach(function(p) {
+                        beforeSel.appendChild(new Option(p.date + ' (' + p.angle + ')', p.id));
+                        afterSel.appendChild(new Option(p.date + ' (' + p.angle + ')', p.id));
+                    });
+                    if (photos.length >= 2) {
+                        afterSel.selectedIndex = photos.length - 1;
+                    }
+                    overlay.classList.add('active');
+                });
+        });
+    }
+
+    closeBtn.addEventListener('click', function() {
+        overlay.classList.remove('active');
+    });
+
+    overlay.addEventListener('click', function(e) {
+        if (e.target === this) this.classList.remove('active');
+    });
+
+    var goBtn = document.getElementById('compare-go');
+    goBtn.addEventListener('click', function() {
+        var beforeId = document.getElementById('compare-before').value;
+        var afterId = document.getElementById('compare-after').value;
+        if (!beforeId || !afterId) return;
+        fetch('/api/photos/' + uid)
+            .then(function(r) { return r.json(); })
+            .then(function(photos) {
+                var before = photos.find(function(p) { return p.id == beforeId; });
+                var after = photos.find(function(p) { return p.id == afterId; });
+                if (!before || !after) return;
+                var slider = document.getElementById('photo-compare-slider');
+                slider.style.backgroundImage = 'url(' + after.file_path + ')';
+                slider.style.backgroundSize = 'cover';
+                slider.style.backgroundPosition = 'center top';
+                var beforeImg = document.getElementById('compare-before-img');
+                beforeImg.style.backgroundImage = 'url(' + before.file_path + ')';
+                beforeImg.style.backgroundSize = 'cover';
+                beforeImg.style.backgroundPosition = 'center top';
+                document.getElementById('compare-before-label').textContent = before.date + ' (' + before.angle + ')';
+                document.getElementById('compare-after-label').textContent = after.date + ' (' + after.angle + ')';
+                var handle = document.getElementById('compare-handle');
+                var isDragging = false;
+                var updateClip = function(x) {
+                    var rect = slider.getBoundingClientRect();
+                    var pct = ((x - rect.left) / rect.width) * 100;
+                    pct = Math.max(0, Math.min(100, pct));
+                    handle.style.left = pct + '%';
+                    beforeImg.style.clipPath = 'inset(0 ' + (100 - pct) + '% 0 0)';
+                };
+                handle.addEventListener('mousedown', function() { isDragging = true; });
+                handle.addEventListener('touchstart', function(e) { e.preventDefault(); isDragging = true; });
+                document.addEventListener('mouseup', function() { isDragging = false; });
+                document.addEventListener('touchend', function() { isDragging = false; });
+                document.addEventListener('mousemove', function(e) { if (isDragging) updateClip(e.clientX); });
+                document.addEventListener('touchmove', function(e) { if (isDragging) updateClip(e.touches[0].clientX); });
+            });
+    });
+})();
+
+// ── Collapsible Form Sections ─────────────────────────────
+(function() {
+    document.querySelectorAll('.form-section-toggle').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var section = this.closest('.form-section');
+            var isCollapsed = section.classList.contains('collapsed');
+            section.classList.toggle('collapsed', !isCollapsed);
+            section.classList.toggle('expanded', isCollapsed);
+            this.setAttribute('aria-expanded', isCollapsed ? 'true' : 'false');
+            var chevron = section.querySelector('.form-section-chevron');
+            chevron.textContent = isCollapsed ? '▾' : '▸';
+        });
+    });
+})();
+</script>
+{% endblock %}

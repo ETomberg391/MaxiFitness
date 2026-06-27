@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}{{ plan['name'] }}{% endblock %}
+
+{% block content %}
+<div class="dashboard-welcome">
+    <div>
+        <h1>{{ plan['name'] }}</h1>
+        <p class="text-dim">{{ plan['description'] }}</p>
+    </div>
+    <div class="dashboard-actions">
+        {% if plan['assignment'] %}
+        <form method="POST" action="/plans/{{ plan['id'] }}/advance" class="inline-form">
+            <button type="submit" class="btn btn-sm btn-primary"
+                    {% if plan['assignment']['current_week'] >= plan['weeks_count'] %}disabled{% endif %}>
+                Advance to Week {{ plan['assignment']['current_week'] + 1 }}
+            </button>
+        </form>
+        <form method="POST" action="/plans/{{ plan['id'] }}/unassign" class="inline-form">
+            <button type="submit" class="btn btn-sm btn-danger">Stop Plan</button>
+        </form>
+        {% else %}
+        <form method="POST" action="/plans/{{ plan['id'] }}/assign" class="inline-form">
+            <button type="submit" class="btn btn-sm btn-primary">Start This Plan</button>
+        </form>
+        {% endif %}
+        <a href="/plans" class="btn btn-sm btn-secondary">Back to Plans</a>
+    </div>
+</div>
+
+<div class="plan-meta-bar">
+    <span class="badge badge-frequency badge-{{ plan['frequency'] }}day">{{ plan['frequency'] }}-Day Split</span>
+    <span class="text-dim text-sm">{{ plan['weeks_count'] }} weeks</span>
+    {% if plan['assignment'] %}
+    <span class="text-accent fw-bold">Currently: Week {{ plan['assignment']['current_week'] }}</span>
+    {% endif %}
+</div>
+
+{% for wk_num, days in plan['weeks'].items() %}
+<div class="card plan-week{% if plan['assignment'] and wk_num == plan['assignment']['current_week'] %} current-week{% endif %}">
+    <div class="card-header">
+        <h3>Week {{ wk_num }}</h3>
+        {% if plan['assignment'] and wk_num == plan['assignment']['current_week'] %}
+        <span class="badge badge-success">Current</span>
+        {% endif %}
+    </div>
+    <div class="week-schedule">
+        {% set day_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}
+        {% for day in days %}
+        <div class="schedule-day{% if day['is_rest'] %} rest-day{% endif %}">
+            <div class="day-header">{{ day_names[day['day_index']] }}</div>
+            {% if day['is_rest'] %}
+            <div class="rest-badge">Rest</div>
+            {% else %}
+            <div class="workout-info">
+                {% if day['video'] %}
+                <span class="workout-name">{{ day['workout_name'] or day['video']['name'] }}</span>
+                <div class="workout-meta">
+                    <span class="badge badge-info">{{ day['duration_min'] or day['video']['duration_min'] }} min</span>
+                    <span class="badge badge-{{ day['video']['intensity'] }}">{{ day['video']['intensity'] }}</span>
+                </div>
+                <a href="{{ day['video']['url'] }}" target="_blank" rel="noopener" class="btn btn-sm btn-primary">
+                    &#x25B6; Play
+                </a>
+                {% else %}
+                <span class="text-dim">No video assigned</span>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endfor %}
+{% endblock %}

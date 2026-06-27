@@ -1,0 +1,840 @@
+{% extends "base.html" %}
+
+{% block title %}Nutrition Tracker{% endblock %}
+
+{% block content %}
+<div class="dashboard-welcome">
+    <div>
+        <h1>Nutrition Tracker</h1>
+        <p class="text-dim">Track what you eat, stay on goal</p>
+    </div>
+</div>
+
+<!-- ── Daily Summary Bar ───────────────────────────────── -->
+<div class="card">
+    <div class="daily-nutrition-summary">
+        <div class="daily-summary-left">
+            <span class="daily-summary-label">Today</span>
+            <span class="daily-summary-value">{{ total_cals }} / {{ goal.daily_goal }} cal</span>
+        </div>
+        <div class="daily-summary-macros">
+            <span class="macro-pill protein">{{ total_protein|round|int }}g protein</span>
+            <span class="macro-pill water">{{ water.glasses }} / {{ goal.water_glasses_goal }} water</span>
+        </div>
+        <span class="daily-summary-status {% if net_cals <= goal.daily_goal %}status-on-track{% else %}status-over{% endif %}">
+            {% if net_cals <= goal.daily_goal %}On track &#x2713;{% else %}Over budget{% endif %}
+        </span>
+    </div>
+</div>
+
+<!-- ── Two Column: Ring+Macros | Water ─────────────────── -->
+<div class="grid-2col">
+    <!-- Calorie Ring + Macros -->
+    <div class="card">
+        <div class="nutrition-summary">
+            <div class="calorie-ring" id="calorieRing">
+                <canvas id="calorieCanvas"></canvas>
+                <div class="ring-center">
+                    <span class="cal-value">{{ total_cals }}</span>
+                    <span class="cal-goal">/ {{ goal.daily_goal }}</span>
+                </div>
+            </div>
+            <div class="macro-breakdown">
+                <div class="macro-item protein"><span>Protein</span><strong>{{ total_protein|round|int }} g</strong></div>
+                <div class="macro-item carbs"><span>Carbs</span><strong>{{ total_carbs|round|int }} g</strong></div>
+                <div class="macro-item fat"><span>Fat</span><strong>{{ total_fat|round|int }} g</strong></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Water Tracker -->
+    <div class="card">
+        <div class="card-header">
+            <h3>&#x1F4A7; Water Intake</h3>
+            <span class="water-count">{{ water.glasses }} / {{ goal.water_glasses_goal }}</span>
+        </div>
+        <div class="water-tracker">
+            {% for i in range(1, goal.water_glasses_goal + 1) %}
+            <button class="water-glass {% if i <= water.glasses %}filled{% endif %}"
+                    data-glass="{{ i }}" onclick="toggleWater({{ i }})">&#x1F4A7;</button>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- ── Two Column: Net Calories | IF Timer ─────────────── -->
+<div class="grid-2col">
+    <!-- Net Calories -->
+    <div class="card">
+        <div class="card-header"><h3>Calorie Balance</h3></div>
+        <div class="net-calories">
+            <span>Eaten: <strong>{{ total_cals }} cal</strong></span>
+            <span>Burned: <strong>{{ workout_cals }} cal</strong></span>
+            <span class="net-value {% if net_cals <= goal.daily_goal %}net-good{% else %}net-over{% endif %}">
+                Net: {{ net_cals }} cal
+            </span>
+        </div>
+    </div>
+
+    <!-- IF Timer -->
+    <div class="card" id="ifTimerCard">
+        <div class="card-header">
+            <h3>Fasting Timer</h3>
+        </div>
+        <div class="fasting-timer" id="fastingTimer">
+            <div class="fasting-timer-loading">Loading...</div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Food logging notice ──────────────────────────── -->
+<div class="card">
+    <div class="card-header">
+        <h3>Add Food</h3>
+    </div>
+    <p class="text-dim" style="padding: 0.5rem 0;">Food can be added via the Android app. Use the Scan tab to barcode scan, search by name, or create a new entry.</p>
+</div>
+
+<!-- ── Today's Log ──────────────────────────────────── -->
+<div class="card">
+    <div class="card-header">
+        <h3>Today's Log &mdash; {{ today }}</h3>
+    </div>
+    {% if foods %}
+    {% for meal in ['breakfast', 'lunch', 'dinner', 'snack'] %}
+    {% set meal_foods = foods|selectattr('meal_type', 'equalto', meal)|list %}
+    {% if meal_foods %}
+    <div class="meal-section">
+        <h4 class="meal-header">{{ meal|capitalize }}</h4>
+        {% for f in meal_foods %}
+        <div class="food-entry">
+            <div class="food-info">
+                <span class="food-name">{{ f.food_name }}</span>
+                <span class="food-macros">{{ f.calories }} cal · P:{{ f.protein_g|round|int }}g · C:{{ f.carbs_g|round|int }}g · F:{{ f.fat_g|round|int }}g</span>
+            </div>
+            <form method="POST" action="/nutrition/delete/{{ f.id }}" style="display:inline;">
+                <button type="submit" class="btn btn-sm btn-danger" title="Remove">&times;</button>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endfor %}
+    {% else %}
+    <p class="text-dim text-center" style="padding: 2rem;">No food logged today yet.</p>
+    {% endif %}
+</div>
+
+<!-- ── Two Column: Weekly Report | Goals ───────────────── -->
+<div class="grid-2col">
+    <!-- Weekly Nutrition Report -->
+    <div class="card">
+        <div class="card-header">
+            <h3>Weekly Report</h3>
+            <span class="text-dim text-sm">last 7 days</span>
+        </div>
+        <div class="weekly-nutrition-report" id="weeklyNutritionReport">
+            <div class="weekly-nutrition-loading">Loading...</div>
+        </div>
+    </div>
+
+    <!-- Update Goals -->
+    <div class="card">
+        <div class="card-header">
+            <h3>Update Goals</h3>
+        </div>
+        <form method="POST" action="/nutrition/goal" class="goal-form">
+            <div class="goal-inputs">
+                <label>
+                    Daily Calorie Goal
+                    <input type="number" name="daily_goal" value="{{ goal.daily_goal }}" min="800" max="5000">
+                </label>
+                <label>
+                    Water Goal (glasses)
+                    <input type="number" name="water_glasses_goal" value="{{ goal.water_glasses_goal }}" min="1" max="20">
+                </label>
+            </div>
+            <button type="submit" class="btn btn-primary">Update Goals</button>
+        </form>
+    </div>
+</div>
+
+<!-- ── Barcode Scanner Full-Screen Overlay ──────────────────── -->
+<div class="barcode-scanner-overlay hidden" id="barcodeScannerOverlay">
+    <div class="barcode-scanner-fullscreen">
+        <div class="barcode-scanner-header">
+            <h3>Scan Barcode</h3>
+            <button class="barcode-scanner-close" id="barcodeScannerClose">&times;</button>
+        </div>
+        <div class="barcode-scanner-viewport" id="barcodeScannerViewport">
+            <video id="barcodeVideo" playsinline muted autoplay style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1;"></video>
+            <canvas id="barcodeCanvas"></canvas>
+            <div class="barcode-reticle-html" id="barcodeReticleHtml" style="display:none;">
+                <div class="barcode-reticle-html-corner top-left"></div>
+                <div class="barcode-reticle-html-corner top-right"></div>
+                <div class="barcode-reticle-html-corner bottom-left"></div>
+                <div class="barcode-reticle-html-corner bottom-right"></div>
+            </div>
+            <div class="barcode-scanner-status" id="barcodeStatus">
+                <span class="barcode-status-text">Position the barcode inside the frame</span>
+            </div>
+        </div>
+        <div class="barcode-scanner-footer">
+            <button type="button" class="btn btn-sm btn-secondary" id="barcodeManualToggle">Enter manually</button>
+            <button type="button" class="btn btn-sm btn-secondary" id="barcodePhotoBtn">Photo</button>
+        </div>
+        <div id="barcodeManualSection" style="display:none;">
+            <form id="barcodeManualForm" class="barcode-main-form">
+                <input type="text" id="barcodeManualInput" placeholder="Enter barcode number" pattern="[0-9]+" inputmode="numeric" autocomplete="off">
+                <button type="submit" class="btn btn-primary">Lookup</button>
+            </form>
+        </div>
+    </div>
+    <input type="file" id="barcodeFileInput" accept="image/*" capture="environment" style="display:none;">
+</div>
+
+<!-- ── Product Confirmation Modal ───────────────────────────── -->
+<div class="product-confirm-overlay hidden" id="productConfirmOverlay">
+    <div class="product-confirm-card">
+        <div class="product-confirm-header">
+            <h3>Product Found</h3>
+            <button class="product-confirm-close" id="productConfirmClose">&times;</button>
+        </div>
+        <div class="product-confirm-body" id="productConfirmBody">
+            <div class="product-confirm-loading">Looking up...</div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Calorie Ring Chart ─────────────────────────────────────
+(function() {
+    var total = {{ total_cals }};
+    var goal = {{ goal.daily_goal }};
+    var pct = Math.min(total / goal, 1);
+    var ctx = document.getElementById('calorieCanvas');
+    if (!ctx) return;
+
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            datasets: [{
+                data: [total, Math.max(goal - total, 0)],
+                backgroundColor: [
+                    pct >= 1 ? '#ef4444' : '#22c55e',
+                    'rgba(255,255,255,0.05)'
+                ],
+                borderWidth: 0,
+            }]
+        },
+        options: {
+            cutout: '75%',
+            rotation: -90,
+            circumference: 360,
+            plugins: { legend: { display: false }, tooltip: { enabled: false } },
+            animation: { animateRotate: true },
+        }
+    });
+})();
+
+// ── Water Toggle ───────────────────────────────────────────
+function toggleWater(n) {
+    var current = {{ water.glasses }};
+    var target = current === n ? n - 1 : n;
+    fetch('/nutrition/water', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'glasses=' + target
+    }).then(function(r) { window.location.reload(); });
+}
+
+// ── Food Search Filter ─────────────────────────────────────
+function filterFoods(query) {
+    var sel = document.getElementById('foodSelect');
+    var results = document.getElementById('foodResults');
+    if (!query || query.length < 2) { results.innerHTML = ''; return; }
+    var q = query.toLowerCase();
+    var matches = [];
+    for (var i = 1; i < sel.options.length; i++) {
+        var opt = sel.options[i];
+        if (opt.text.toLowerCase().indexOf(q) !== -1) {
+            matches.push(opt);
+            if (matches.length >= 10) break;
+        }
+    }
+    results.innerHTML = '';
+    matches.forEach(function(opt) {
+        var div = document.createElement('div');
+        div.className = 'food-result-item';
+        div.textContent = opt.text;
+        div.onclick = function() {
+            sel.value = opt.value;
+            results.innerHTML = '';
+            document.getElementById('foodSearch').value = '';
+        };
+        results.appendChild(div);
+    });
+}
+
+// ── IF Timer ───────────────────────────────────────────────
+(function() {
+    var container = document.getElementById('fastingTimer');
+    if (!container) return;
+    function renderFasting(status) {
+        if (!status) {
+            container.innerHTML = '<div class="fasting-timer-loading">Set your eating window in your profile to enable the timer.</div>';
+            return;
+        }
+        var mins = status.minutes_remaining;
+        var hrs = Math.floor(mins / 60);
+        var remMins = mins % 60;
+        var isFasting = status.fasting;
+        container.className = 'fasting-timer ' + (isFasting ? 'fasting' : 'eating');
+        container.innerHTML = '<div class="fasting-timer-inner"><div class="fasting-timer-label">' + (isFasting ? 'Fasting' : 'Eating Window') + '</div><div class="fasting-timer-value">' + hrs + 'h ' + remMins + 'm</div><div class="fasting-timer-sub">' + (isFasting ? 'until eating window' : 'remaining') + '</div><div class="fasting-timer-window">' + status.eating_window + '</div></div>';
+    }
+    fetch('/api/fasting-status')
+        .then(function(r) { return r.json(); })
+        .then(renderFasting)
+        .catch(function() { container.innerHTML = '<div class="fasting-timer-loading">Could not load timer.</div>'; });
+    setInterval(function() {
+        fetch('/api/fasting-status')
+            .then(function(r) { return r.json(); })
+            .then(renderFasting);
+    }, 60000);
+})();
+
+// ── Weekly Nutrition Report ────────────────────────────────
+(function() {
+    var container = document.getElementById('weeklyNutritionReport');
+    if (!container) return;
+    function renderWeekly(data) {
+        if (!data) {
+            container.innerHTML = '<div class="weekly-nutrition-loading">No data available.</div>';
+            return;
+        }
+        var html = '<div class="weekly-chart-container"><canvas id="weeklyNutritionChart"></canvas></div>';
+        html += '<div class="weekly-summary-stats">';
+        html += '<div class="weekly-stat"><span class="weekly-stat-label">Cal goal hit</span><span class="weekly-stat-value">' + data.cal_days_hit + '/7 days</span></div>';
+        html += '<div class="weekly-stat"><span class="weekly-stat-label">Water goal hit</span><span class="weekly-stat-value">' + data.water_days_hit + '/7 days</span></div>';
+        html += '<div class="weekly-stat"><span class="weekly-stat-label">Avg protein</span><span class="weekly-stat-value">' + data.avg_protein + ' g/day</span></div>';
+        html += '<div class="weekly-stat"><span class="weekly-stat-label">Avg water</span><span class="weekly-stat-value">' + data.avg_water + '/day</span></div>';
+        html += '</div>';
+        if (data.tips && data.tips.length) {
+            html += '<div class="nutrition-tip">' + data.tips[0] + '</div>';
+        }
+        container.innerHTML = html;
+        var ctx = document.getElementById('weeklyNutritionChart');
+        if (ctx && typeof Chart !== 'undefined') {
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.days.map(function(d) { return d.label; }),
+                    datasets: [{
+                        label: 'Calories',
+                        data: data.days.map(function(d) { return d.calories; }),
+                        backgroundColor: 'rgba(239, 68, 68, 0.6)',
+                        borderRadius: 4,
+                    }, {
+                        label: 'Goal',
+                        data: data.days.map(function() { return data.daily_goal; }),
+                        type: 'line',
+                        borderColor: 'rgba(34, 197, 94, 0.8)',
+                        borderDash: [5, 5],
+                        pointRadius: 0,
+                        borderWidth: 1,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    aspectRatio: 2,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(22,27,44,0.95)',
+                            titleColor: '#e2e8f0',
+                            bodyColor: '#94a3b8',
+                        }
+                    },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { color: '#64748b' } },
+                        y: { beginAtZero: true, grid: { color: 'rgba(148,163,184,0.08)' }, ticks: { color: '#64748b', callback: function(v) { return v + ' cal'; } } }
+                    }
+                }
+            });
+        }
+    }
+    fetch('/api/weekly-nutrition')
+        .then(function(r) { return r.json(); })
+        .then(renderWeekly)
+        .catch(function() { container.innerHTML = '<div class="weekly-nutrition-loading">Could not load weekly report.</div>'; });
+})();
+// ── Barcode Scanner ─────────────────────────────────────────
+(function() {
+    var overlay = document.getElementById('barcodeScannerOverlay');
+    var confirmOverlay = document.getElementById('productConfirmOverlay');
+    var confirmBody = document.getElementById('productConfirmBody');
+    var trigger = document.getElementById('scanTrigger');
+    var closeScan = document.getElementById('barcodeScannerClose');
+    var closeConfirm = document.getElementById('productConfirmClose');
+    var video = document.getElementById('barcodeVideo');
+    var canvas = document.getElementById('barcodeCanvas');
+    var ctx = canvas.getContext('2d', { willReadFrequently: true });
+    var statusDiv = document.getElementById('barcodeStatus');
+    var statusText = statusDiv ? statusDiv.querySelector('.barcode-status-text') : null;
+    var manualToggle = document.getElementById('barcodeManualToggle');
+    var photoBtn = document.getElementById('barcodePhotoBtn');
+    var fileInput = document.getElementById('barcodeFileInput');
+    var manualSection = document.getElementById('barcodeManualSection');
+    var manualForm = document.getElementById('barcodeManualForm');
+    var footer = document.querySelector('.barcode-scanner-footer');
+    var viewport = document.getElementById('barcodeScannerViewport');
+    if (!overlay || !trigger) return;
+
+    var track = null;
+    var stream = null;
+    var detector = null;
+    var scanning = false;
+    var detectInterval = null;
+    var scanLinePos = 0;
+    var scanLineDir = 1;
+    var detectedFlash = 0;
+    var lastFrame = null;
+    var useNative = typeof BarcodeDetector !== 'undefined';
+    var useRequestFrame = typeof MediaStreamTrack !== 'undefined' && typeof MediaStreamTrack.prototype.requestFrame === 'function';
+    var qrScanner = null;
+    // Initialize native detector (Chrome/Edge)
+    if (useNative) {
+        try {
+            detector = new BarcodeDetector({
+                formats: [
+                    'ean_13', 'ean_8', 'upc_a', 'upc_e',
+                    'code_128', 'code_39', 'code_93',
+                    'codabar', 'itf', 'qr_code', 'data_matrix', 'pdf417', 'aztec'
+                ]
+            });
+            console.log('[Scanner] BarcodeDetector initialized with formats:', detector.getSupportedFormats ? detector.getSupportedFormats() : 'unknown');
+        } catch(e) {
+            console.warn('[Scanner] BarcodeDetector init failed:', e);
+            useNative = false;
+        }
+    }
+
+    function setStatus(msg) {
+        if (statusText) statusText.textContent = msg;
+    }
+
+    function showHtmlReticle() {
+        var reticle = document.getElementById('barcodeReticleHtml');
+        if (reticle) reticle.style.display = 'block';
+    }
+
+    function hideHtmlReticle() {
+        var reticle = document.getElementById('barcodeReticleHtml');
+        if (reticle) reticle.style.display = 'none';
+    }
+
+    function playBeep() {
+        try {
+            var ac = new (window.AudioContext || window.webkitAudioContext)();
+            var osc = ac.createOscillator();
+            var gain = ac.createGain();
+            osc.connect(gain);
+            gain.connect(ac.destination);
+            osc.frequency.value = 1200;
+            osc.type = 'sine';
+            gain.gain.value = 0.3;
+            osc.start();
+            gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.15);
+            osc.stop(ac.currentTime + 0.15);
+        } catch(e) {}
+    }
+
+    function drawReticle(w, h, detected) {
+        var rw = Math.min(w * 0.85, 400);
+        var rh = Math.min(h * 0.5, 240);
+        var rx = (w - rw) / 2;
+        var ry = (h - rh) / 2;
+        var cl = 28;
+        var bc = detected ? '#00ff88' : 'rgba(255,255,255,0.8)';
+        var bg = detected ? 'rgba(0,255,136,0.15)' : 'rgba(0,0,0,0.25)';
+        ctx.fillStyle = bg;
+        ctx.fillRect(rx, ry, rw, rh);
+        ctx.strokeStyle = bc;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(rx, ry, rw, rh);
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = bc;
+        ctx.beginPath();
+        ctx.moveTo(rx, ry + cl); ctx.lineTo(rx, ry); ctx.lineTo(rx + cl, ry);
+        ctx.moveTo(rx + rw - cl, ry); ctx.lineTo(rx + rw, ry); ctx.lineTo(rx + rw, ry + cl);
+        ctx.moveTo(rx, ry + rh - cl); ctx.lineTo(rx, ry + rh); ctx.lineTo(rx + cl, ry + rh);
+        ctx.moveTo(rx + rw - cl, ry + rh); ctx.lineTo(rx + rw, ry + rh); ctx.lineTo(rx + rw, ry + rh - cl);
+        ctx.stroke();
+        if (!detected) {
+            var sy = ry + (rh * scanLinePos / 100);
+            var g = ctx.createLinearGradient(rx, sy, rx + rw, sy);
+            g.addColorStop(0, 'transparent');
+            g.addColorStop(0.5, '#00ff88');
+            g.addColorStop(1, 'transparent');
+            ctx.strokeStyle = g;
+            ctx.lineWidth = 2;
+            ctx.shadowColor = '#00ff88';
+            ctx.shadowBlur = 8;
+            ctx.beginPath();
+            ctx.moveTo(rx + 10, sy);
+            ctx.lineTo(rx + rw - 10, sy);
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+        }
+    }
+
+    function renderFrame() {
+        if (!scanning) return;
+        var dw = canvas.clientWidth || 390;
+        var dh = canvas.clientHeight || 600;
+        if (canvas.width !== dw || canvas.height !== dh) {
+            canvas.width = dw;
+            canvas.height = dh;
+        }
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, dw, dh);
+
+        var source = lastFrame || video;
+        var vw, vh;
+        if (lastFrame) {
+            vw = lastFrame.width; vh = lastFrame.height;
+        } else if (video.videoWidth > 0) {
+            vw = video.videoWidth; vh = video.videoHeight;
+        } else {
+            requestAnimationFrame(renderFrame);
+            return;
+        }
+
+        var va = vw / vh;
+        var ca = dw / dh;
+        var drawW, drawH, drawX, drawY;
+        if (va > ca) {
+            drawH = dh; drawW = dh * va;
+            drawX = (dw - drawW) / 2; drawY = 0;
+        } else {
+            drawW = dw; drawH = dw / va;
+            drawX = 0; drawY = (dh - drawH) / 2;
+        }
+        ctx.drawImage(source, drawX, drawY, drawW, drawH);
+
+        scanLinePos += 1.5 * scanLineDir;
+        if (scanLinePos >= 90) scanLineDir = -1;
+        if (scanLinePos <= 10) scanLineDir = 1;
+        try { drawReticle(dw, dh, detectedFlash > 0); } catch(e) { console.error('drawReticle error:', e); }
+        if (detectedFlash > 0) detectedFlash--;
+        requestAnimationFrame(renderFrame);
+    }
+
+    function onFrame(bitmap, frameInfo) {
+        if (!scanning) return;
+        lastFrame = bitmap;
+        if (track && track.requestFrame) {
+            track.requestFrame(onFrame);
+        }
+    }
+    function startRenderLoop() {
+        requestAnimationFrame(renderFrame);
+    }
+
+    async function startCamera() {
+        // ZXing-js scanner — works in all modern browsers, no UI restrictions
+        if (typeof ZXingBrowser === 'undefined' || !ZXingBrowser.BrowserMultiFormatReader) {
+            setStatus('Scanner not loaded. Try entering manually.');
+            showToast('Scanner library failed to load. Enter manually.', '\u274C', 4000);
+            toggleManual();
+            return;
+        }
+        try {
+            // First, get camera stream and display it in the video element for the user to see
+            stream = await navigator.mediaDevices.getUserMedia({
+                video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'environment' },
+                audio: false
+            });
+            video.srcObject = stream;
+            await video.play();
+            scanning = true;
+            setStatus('Position the barcode inside the frame');
+            showHtmlReticle();
+            startRenderLoop();
+
+            // Create ZXing reader
+            qrScanner = new ZXingBrowser.BrowserMultiFormatReader();
+            console.log('[Scanner] ZXing starting, video dims:', video.videoWidth, 'x', video.videoHeight);
+
+            // High-frequency manual decode loop using canvas-based scanning
+            // We draw the video frame to a canvas and pass the canvas to ZXing
+            // This gives us more control and works better than reading from the video element directly
+            var decodeAttempts = 0;
+            var scanCanvas = document.createElement('canvas');
+            var scanCtx = scanCanvas.getContext('2d');
+
+            async function fastDecodeLoop() {
+                if (!scanning) return;
+                decodeAttempts++;
+                if (video.videoWidth > 0 && video.videoHeight > 0) {
+                    // Draw current video frame to offscreen canvas
+                    scanCanvas.width = video.videoWidth;
+                    scanCanvas.height = video.videoHeight;
+                    scanCtx.drawImage(video, 0, 0);
+                    try {
+                        // Use decodeFromCanvasElement which is more reliable than decodeFromVideoElement
+                        var result = await qrScanner.decodeFromCanvas(scanCanvas);
+                        if (result) {
+                            var barcodeValue = result.getText();
+                            var format = result.getBarcodeFormat();
+                            console.log('[Scanner] BARCODE FOUND:', barcodeValue, 'format:', format, 'after', decodeAttempts, 'attempts');
+                            detectedFlash = 30;
+                            stopScanning();
+                            playBeep();
+                            setStatus('Barcode found!');
+                            setTimeout(function() {
+                                closeScanner();
+                                lookupBarcode(barcodeValue);
+                            }, 800);
+                            return;
+                        }
+                    } catch(e) {
+                        if (decodeAttempts === 1 || decodeAttempts % 100 === 0) {
+                            console.log('[Scanner] Decode attempt', decodeAttempts, '- error:', e.name || 'none', 'msg:', (e.message || '').substring(0, 100));
+                        }
+                    }
+                }
+                if (scanning) {
+                    setTimeout(fastDecodeLoop, 50);
+                }
+            }
+            fastDecodeLoop();
+        } catch(err) {
+            console.warn('Camera failed:', err);
+            setStatus('Camera unavailable. Try entering the barcode manually.');
+            showToast('Camera not available. Try entering manually.', '\u274C', 4000);
+        }
+    }
+
+    function startNativeDetection() {
+        // No longer needed — ZXing handles detection in startCamera()
+        // Kept as a no-op for backward compatibility
+    }
+
+    function stopScanning() {
+        scanning = false;
+        if (detectInterval) { clearInterval(detectInterval); detectInterval = null; }
+        // Stop ZXing reader first
+        if (qrScanner) {
+            try { qrScanner.reset(); } catch(e) {}
+            qrScanner = null;
+        }
+        if (track) {
+            track.stop();
+            track = null;
+        }
+        if (stream) {
+            stream.getTracks().forEach(function(t) { t.stop(); });
+            stream = null;
+        }
+        video.srcObject = null;
+        hideHtmlReticle();
+        lastFrame = null;
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function openScanner() {
+        overlay.classList.remove('hidden');
+        overlay.style.setProperty('display', 'flex', 'important');
+        manualSection.style.display = 'none';
+        if (footer) footer.style.display = 'flex';
+        if (viewport) viewport.style.display = 'block';
+        if (typeof ZXingBrowser === 'undefined' || !ZXingBrowser.BrowserMultiFormatReader) {
+            setStatus('Scanner not loaded. Enter manually or use a photo.');
+            toggleManual();
+            return;
+        }
+        setStatus('Position the barcode inside the frame');
+        startCamera();
+    }
+
+    function closeScanner() {
+        stopScanning();
+        overlay.classList.add('hidden');
+        overlay.style.removeProperty('display');
+    }
+
+    function toggleManual() {
+        if (manualSection.style.display === 'block') {
+            manualSection.style.display = 'none';
+            if (viewport) viewport.style.display = 'block';
+            if (footer) footer.style.display = 'flex';
+            startCamera();
+        } else {
+            stopScanning();
+            manualSection.style.display = 'block';
+            if (viewport) viewport.style.display = 'none';
+            if (footer) footer.style.display = 'none';
+            var input = document.getElementById('barcodeManualInput');
+            if (input) input.focus();
+        }
+    }
+
+    function lookupBarcode(barcode) {
+        confirmOverlay.classList.remove('hidden');
+        confirmBody.innerHTML = '<div class="product-confirm-loading">Looking up barcode ' + barcode + '...</div>';
+        fetch('/api/lookup-barcode/' + encodeURIComponent(barcode))
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (!data.success || !data.product) {
+                    confirmBody.innerHTML = '<div class="product-confirm-error"><p>Product not found in Open Food Facts.</p><p class="text-dim text-sm">Try scanning again or enter manually.</p></div>';
+                    return;
+                }
+                var p = data.product;
+                var n = data.nutriments || {};
+                var name = p.product_name || 'Unknown';
+                var img = p.image_front_small_url || p.image_front_url || '';
+                var kcal = Math.round(n['energy-kcal_100g'] || n['energy-kcal_value'] || 0);
+                var protein = Math.round((n.proteins_100g || n.proteins_value || 0) * 10) / 10;
+                var carbs = Math.round((n.carbohydrates_100g || n.carbohydrates_value || 0) / 10) / 10;
+                var fat = Math.round((n.fat_100g || n.fat_value || 0) * 10) / 10;
+                var qty = p.quantity || '100g';
+                var html = '<div class="product-confirm-info">';
+                if (img) html += '<img class="product-confirm-img" src="' + img + '" alt="' + name + '">';
+                html += '<div><h4 class="product-confirm-name">' + name + '</h4>';
+                html += '<div class="product-confirm-macros">';
+                html += '<span class="macro-pill cal">' + kcal + ' cal/100g</span>';
+                html += '<span class="macro-pill protein">' + protein + 'g protein</span>';
+                html += '<span class="macro-pill carbs">' + carbs + 'g carbs</span>';
+                html += '<span class="macro-pill fat">' + fat + 'g fat</span>';
+                html += '</div>';
+                html += '<p class="product-confirm-qty">Serving: ' + qty + '</p></div></div>';
+                html += '<div class="product-confirm-actions">';
+                html += '<button class="btn btn-secondary" id="productReject">No</button>';
+                html += '<button class="btn btn-primary" id="productAccept">Yes, Record It</button>';
+                html += '</div>';
+                confirmBody.innerHTML = html;
+                document.getElementById('productAccept').addEventListener('click', function() {
+                    this.disabled = true;
+                    this.textContent = 'Logging...';
+                    var fd = new FormData();
+                    fd.append('food_name', name);
+                    fd.append('calories', kcal);
+                    fd.append('protein_g', protein);
+                    fd.append('carbs_g', carbs);
+                    fd.append('fat_g', fat);
+                    fd.append('meal_type', 'snack');
+                    fd.append('barcode', barcode);
+                    var self = this;
+                    fetch('/nutrition/log-barcode', { method: 'POST', body: fd })
+                        .then(function(r) {
+                            if (r.ok || r.redirected) {
+                                showToast(name + ' logged! (' + kcal + ' cal)', '\u2705', 3000);
+                                closeConfirmFn();
+                                setTimeout(function() { window.location.reload(); }, 1500);
+                            } else {
+                                self.disabled = false;
+                                self.textContent = 'Yes, Record It';
+                                showToast('Error logging product', '\u274C', 3000);
+                            }
+                        })
+                        .catch(function() {
+                            self.disabled = false;
+                            self.textContent = 'Yes, Record It';
+                            showToast('Network error', '\u274C', 3000);
+                        });
+                });
+                document.getElementById('productReject').addEventListener('click', closeConfirmFn);
+            })
+            .catch(function() {
+                confirmBody.innerHTML = '<div class="product-confirm-error"><p>Could not reach the server.</p><p class="text-dim text-sm">Check your internet connection.</p></div>';
+            });
+    }
+
+    function closeConfirmFn() {
+        confirmOverlay.classList.add('hidden');
+        confirmBody.innerHTML = '<div class="product-confirm-loading">Looking up...</div>';
+    }
+
+    function decodeFromPhoto(file) {
+        if (!file) return;
+        if (typeof ZXingBrowser === 'undefined' || !ZXingBrowser.BrowserMultiFormatReader) {
+            showToast('Scanner not loaded. Enter manually.', '\u274C', 3000);
+            fileInput.value = '';
+            return;
+        }
+        setStatus('Scanning photo...');
+        var img = new Image();
+        img.onload = function() {
+            try {
+                var reader = new ZXingBrowser.BrowserMultiFormatReader();
+                // Use ZXing's decodeFromImageElement by creating an HTMLImageElement
+                ZXingBrowser.BrowserCodeReader.decodeFromImageElement
+                    ? reader.decodeFromImageElement(img).then(function(result) {
+                        closeScanner();
+                        lookupBarcode(result.getText());
+                    }).catch(function() {
+                        showToast('No barcode found in photo.', '\u274C', 3000);
+                    })
+                    : null;
+            } catch(e) {
+                showToast('Error scanning photo.', '\u274C', 3000);
+            }
+        };
+        img.onerror = function() {
+            showToast('Could not load photo.', '\u274C', 3000);
+        };
+        img.src = URL.createObjectURL(file);
+        fileInput.value = '';
+    }
+
+    trigger.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        openScanner();
+    });
+    closeScan.addEventListener('click', closeScanner);
+    closeConfirm.addEventListener('click', closeConfirmFn);
+    overlay.addEventListener('click', function(e) {
+        if (e.target === overlay) closeScanner();
+    });
+    confirmOverlay.addEventListener('click', function(e) {
+        if (e.target === confirmOverlay) closeConfirmFn();
+    });
+    if (manualToggle) {
+        manualToggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleManual();
+        });
+    }
+    if (photoBtn) {
+        photoBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            fileInput.click();
+        });
+    }
+    if (fileInput) {
+        fileInput.addEventListener('change', function(e) {
+            decodeFromPhoto(e.target.files[0]);
+        });
+    }
+    if (manualForm) {
+        manualForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            var val = document.getElementById('barcodeManualInput').value.trim();
+            if (val && /^[0-9]+$/.test(val)) {
+                closeScanner();
+                lookupBarcode(val);
+            }
+        });
+    }
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block title %}Weekly Schedule — MaxiFitness{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Weekly Schedule</h1>
+    <p class="subtitle">Your phased training plan — follow along week by week</p>
+</div>
+
+{% if current_phase %}
+<div class="current-phase-banner">
+    <span class="text-accent fw-bold">Current Phase:</span> {{ current_phase }}
+</div>
+{% endif %}
+
+<div class="schedule-phases">
+    {% for plan in plans %}
+    {% set is_current = plan['phase_name'] in current_phase if current_phase else False %}
+    <div class="card schedule-phase{% if is_current %} phase-active{% endif %}">
+        <div class="card-header">
+            <div class="d-flex justify-between align-center">
+                <div>
+                    <h2>{{ plan['phase_name'] }}</h2>
+                    <span class="text-dim text-sm">
+                        Week {{ plan['week_start'] }}{% if plan['week_end'] %} – {{ plan['week_end'] }}{% endif %}
+                    </span>
+                </div>
+                {% if is_current %}
+                <span class="badge badge-info">Active</span>
+                {% endif %}
+            </div>
+            {% if plan['description'] %}
+            <p class="text-dim text-sm mt-1">{{ plan['description'] }}</p>
+            {% endif %}
+        </div>
+
+        <div class="schedule-days-list">
+            {% for day in plan['days'] %}
+            <div class="schedule-day{% if day['is_rest'] %} rest-day{% endif %}">
+                <div class="day-name">
+                    {{ day['day_name'] }}
+                </div>
+                <div class="day-workout">
+                    <span class="day-workout-name">
+                        {% if day['is_rest'] %}
+                        <span class="badge badge-rest">Rest</span>
+                        {% else %}
+                        {{ day['workout_name'] }}
+                        {% if day['duration_min'] %}
+                        <span class="text-dim text-sm">· {{ day['duration_min'] }} min</span>
+                        {% endif %}
+                        {% if day['video_url'] %}
+                        <a href="{{ day['video_url'] }}" target="_blank" class="video-link" title="Watch video">▶</a>
+                        {% endif %}
+                        {% endif %}
+                    </span>
+                    {% if day['description'] and not day['is_rest'] %}
+                    <div class="day-workout-detail">{{ day['description'] }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="card schedule-tip mt-3">
+    <p class="text-sm text-dim" style="margin:0">
+        <strong class="text-accent">Tip:</strong> Your current phase is based on your start date.
+        Adjust in <a href="#" onclick="document.getElementById('settings-modal')?.showModal(); return false;">Settings</a>.
+    </p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var today = new Date().getDay();
+    var dayMap = [6, 0, 1, 2, 3, 4, 5]; // JS Sunday=0 → our Monday=0
+    var todayIdx = dayMap[today];
+
+    document.querySelectorAll('.schedule-phase.phase-active .schedule-day').forEach(function (row, i) {
+        if (i === todayIdx) {
+            row.classList.add('day-today');
+        }
+    });
+});
+</script>
+<style>
+.current-phase-banner {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: var(--radius);
+    padding: 0.75rem 1rem;
+    margin-bottom: 1.5rem;
+    font-size: 0.95rem;
+}
+.schedule-phases {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+.schedule-phase {
+    position: relative;
+}
+.schedule-phase.phase-active {
+    border-color: var(--accent);
+    box-shadow: var(--shadow-glow);
+}
+.schedule-days-list {
+    padding: 0.5rem 0;
+}
+.video-link {
+    color: var(--accent);
+    text-decoration: none;
+    margin-left: 0.35rem;
+    font-size: 0.9rem;
+    transition: color var(--transition);
+}
+.video-link:hover {
+    color: var(--accent);
+}
+.schedule-day.day-today {
+    background: rgba(239, 68, 68, 0.06);
+    border-radius: 6px;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+}
+.schedule-day.day-today .day-name::after {
+    content: ' (today)';
+    font-weight: 400;
+    font-size: 0.8rem;
+    color: var(--accent);
+}
+</style>
+{% endblock %}

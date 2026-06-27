@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+
+{% block title %}Create Workout Plan{% endblock %}
+
+{% block content %}
+<div class="dashboard-welcome">
+    <div>
+        <h1>Create Workout Plan</h1>
+        <p class="text-dim">Build your custom weekly schedule</p>
+    </div>
+</div>
+
+<form method="POST" id="plan-builder-form">
+    <!-- Wizard Progress -->
+    <div class="wizard-progress">
+        <div class="wizard-step active" data-step="1">
+            <span class="step-number">1</span>
+            <span class="step-label">Details</span>
+        </div>
+        <div class="wizard-step" data-step="2">
+            <span class="step-number">2</span>
+            <span class="step-label">Schedule</span>
+        </div>
+        <div class="wizard-step" data-step="3">
+            <span class="step-number">3</span>
+            <span class="step-label">Review</span>
+        </div>
+    </div>
+
+    <!-- Step 1: Details -->
+    <div class="wizard-panel active" id="step-1">
+        <div class="card">
+            <div class="form-group">
+                <label for="plan-name">Plan Name</label>
+                <input type="text" id="plan-name" name="name" placeholder="e.g. My 3-Day Plan" required>
+            </div>
+            <div class="form-group">
+                <label for="plan-description">Description</label>
+                <textarea id="plan-description" name="description" rows="2" placeholder="What this plan is for..."></textarea>
+            </div>
+            <div class="form-group">
+                <label>Frequency</label>
+                <div class="radio-group">
+                    <label><input type="radio" name="frequency" value="3" checked onchange="buildDaySchedule()"> 3-Day Split (Mon/Wed/Fri)</label>
+                    <label><input type="radio" name="frequency" value="4" onchange="buildDaySchedule()"> 4-Day Split (Mon/Tue/Thu/Sat)</label>
+                    <label><input type="radio" name="frequency" value="5" onchange="buildDaySchedule()"> 5-Day Split (Mon/Tue/Wed/Fri/Sat)</label>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="weeks-count">Number of Weeks</label>
+                <input type="number" id="weeks-count" name="weeks_count" min="1" max="8" value="4">
+                <span class="text-dim text-sm">Each week can have progressively harder workouts</span>
+            </div>
+            {% if prolapse_flagged %}
+            <div class="form-group">
+                <label><input type="checkbox" name="prolapse_safe" checked disabled> Prolapse-safe mode (only safe videos)</label>
+            </div>
+            {% endif %}
+            <button type="button" class="btn btn-primary" onclick="nextStep(2)">Next: Schedule</button>
+        </div>
+    </div>
+
+    <!-- Step 2: Schedule -->
+    <div class="wizard-panel" id="step-2">
+        <div class="card">
+            <div class="d-flex justify-between align-center mb-2">
+                <h3>Week 1 Schedule</h3>
+                <button type="button" class="btn btn-sm btn-secondary" id="auto-fill-btn">Auto-fill Workout Days</button>
+            </div>
+            <div class="day-schedule-grid" id="day-schedule"></div>
+            <div class="wizard-nav">
+                <button type="button" class="btn btn-secondary" onclick="nextStep(1)">Back</button>
+                <button type="button" class="btn btn-primary" onclick="nextStep(3)">Next: Review</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 3: Review -->
+    <div class="wizard-panel" id="step-3">
+        <div class="card">
+            <h3>Review &amp; Create</h3>
+            <p class="text-dim text-sm">Check your schedule above, then submit to create the plan.</p>
+            <div class="wizard-nav">
+                <button type="button" class="btn btn-secondary" onclick="nextStep(2)">Back</button>
+                <button type="submit" class="btn btn-primary">Create Plan</button>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+var currentStep = 1;
+var dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+var frequencyDefaults = {
+    3: [0, 2, 4],
+    4: [0, 1, 3, 5],
+    5: [0, 1, 2, 4, 5]
+};
+
+function nextStep(step) {
+    document.querySelectorAll('.wizard-panel').forEach(function(p) { p.classList.remove('active'); });
+    document.querySelectorAll('.wizard-step').forEach(function(s) { s.classList.remove('active'); });
+    document.getElementById('step-' + step).classList.add('active');
+    document.querySelector('.wizard-step[data-step="' + step + '"]').classList.add('active');
+    currentStep = step;
+    if (step === 2) buildDaySchedule();
+}
+
+function buildDaySchedule() {
+    var freq = document.querySelector('input[name="frequency"]:checked').value;
+    var container = document.getElementById('day-schedule');
+    container.innerHTML = '';
+    var workoutDays = frequencyDefaults[freq];
+
+    for (var i = 0; i < 7; i++) {
+        var isWorkout = workoutDays.indexOf(i) !== -1;
+        var dayDiv = document.createElement('div');
+        dayDiv.className = 'day-column';
+        var opts = '<option value="">-- Select Video --</option>';
+        {% for v in videos %}
+        opts += '<option value="{{ v.id }}">{{ v.name }} ({{ v.duration_min }}min, {{ v.intensity }})</option>';
+        {% endfor %}
+        dayDiv.innerHTML = '<h4>' + dayNames[i] + '</h4>' +
+            '<label class="toggle-label"><input type="checkbox" name="day_' + i + '_rest" ' +
+            (isWorkout ? '' : 'checked') + ' onchange="toggleDay(' + i + ')"> Rest Day</label>' +
+            '<select name="day_' + i + '_video" class="' + (isWorkout ? '' : 'hidden') + '">' + opts + '</select>';
+        container.appendChild(dayDiv);
+    }
+}
+
+function toggleDay(dayIdx) {
+    var rest = document.querySelector('[name="day_' + dayIdx + '_rest"]').checked;
+    var sel = document.querySelector('[name="day_' + dayIdx + '_video"]');
+    sel.classList.toggle('hidden', rest);
+}
+
+// Auto-fill: pick random videos for workout days
+document.getElementById('auto-fill-btn').addEventListener('click', function() {
+    var freq = document.querySelector('input[name="frequency"]:checked').value;
+    var workoutDays = frequencyDefaults[freq];
+    var selects = document.querySelectorAll('[name^="day_"][name$="_video"]:not(.hidden)');
+    var allOpts = [];
+    var firstSelect = document.querySelector('[name="day_0_video"]');
+    if (firstSelect) {
+        for (var i = 1; i < firstSelect.options.length; i++) {
+            allOpts.push(firstSelect.options[i].value);
+        }
+    }
+    selects.forEach(function(sel) {
+        if (allOpts.length > 0) {
+            sel.value = allOpts[Math.floor(Math.random() * allOpts.length)];
+        }
+    });
+});
+
+// On submit, serialize schedule as JSON
+document.getElementById('plan-builder-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    var weeksCount = parseInt(document.getElementById('weeks-count').value) || 1;
+    var schedule = [];
+
+    for (var wk = 1; wk <= weeksCount; wk++) {
+        var weekDays = [];
+        for (var d = 0; d < 7; d++) {
+            var restChk = document.querySelector('[name="day_' + d + '_rest"]');
+            var videoSel = document.querySelector('[name="day_' + d + '_video"]');
+            var isRest = restChk ? restChk.checked : true;
+            var vid = isRest ? null : (videoSel && videoSel.value ? parseInt(videoSel.value) : null);
+            weekDays.push({ day: d, rest: isRest, video_id: vid });
+        }
+        schedule.push({ week: wk, days: weekDays });
+    }
+
+    var hidden = document.createElement('input');
+    hidden.type = 'hidden';
+    hidden.name = 'schedule';
+    hidden.value = JSON.stringify(schedule);
+    this.appendChild(hidden);
+    this.submit();
+});
+
+// Build on load
+buildDaySchedule();
+</script>
+{% endblock %}

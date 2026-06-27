@@ -1,0 +1,448 @@
+{% extends "base.html" %}
+
+{% block title %}Reference Guide — MaxiFitness{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Reference Guide</h1>
+    <p class="subtitle">Everything you need to know about the MaxiClimber, from mechanics to nutrition</p>
+</div>
+
+<div class="reference-sections">
+    <!-- What the MaxiClimber Does -->
+    <div class="card ref-card">
+        <button class="ref-toggle" aria-expanded="false">
+            <span class="ref-toggle-title">What the MaxiClimber Does</span>
+            <span class="ref-toggle-icon">+</span>
+        </button>
+        <div class="ref-body">
+            <p>The MaxiClimber is a full-body, low-impact cardio machine that simulates the motion of mountain climbing. Using a pulley-and-cable system, you pull down on handles while stepping on foot pedals, creating a continuous climbing rhythm.</p>
+            <p>It engages your arms, shoulders, back, core, and legs simultaneously — delivering a complete workout in a fraction of the time of traditional cardio. The low-impact design means minimal stress on joints while still producing a high heart rate and significant calorie burn.</p>
+            <ul class="ref-list">
+                <li>Full-body engagement (arms, core, legs, back)</li>
+                <li>Low-impact on joints</li>
+                <li>High calorie burn per minute</li>
+                <li>Compact — fits in a corner</li>
+                <li>Quiet operation</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Calorie Burn -->
+    <div class="card ref-card">
+        <button class="ref-toggle" aria-expanded="false">
+            <span class="ref-toggle-title">Calorie Burn Comparison</span>
+            <span class="ref-toggle-icon">+</span>
+        </button>
+        <div class="ref-body">
+            <p class="text-dim text-sm mb-2">Estimated calories burned per hour at moderate intensity for a 180 lb person:</p>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Activity</th>
+                            <th>Calories / Hour</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>MaxiClimber</td>
+                            <td><strong class="text-accent">~509</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Stationary Bike (moderate)</td>
+                            <td>~331</td>
+                        </tr>
+                        <tr>
+                            <td>Treadmill (moderate pace)</td>
+                            <td>~250</td>
+                        </tr>
+                        <tr>
+                            <td>Elliptical (moderate)</td>
+                            <td>~350</td>
+                        </tr>
+                        <tr>
+                            <td>Jump Rope</td>
+                            <td>~700</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="text-dim text-xs mt-2">Actual burn varies by weight, intensity, and fitness level. These are estimates based on ACSM metabolic equations.</p>
+        </div>
+    </div>
+
+    <!-- Per-Session Estimates -->
+    <div class="card ref-card">
+        <button class="ref-toggle" aria-expanded="false">
+            <span class="ref-toggle-title">Per-Session Calorie Estimates</span>
+            <span class="ref-toggle-icon">+</span>
+        </button>
+        <div class="ref-body">
+            <p class="text-dim text-sm mb-2">Estimated calories burned per session (180 lb person):</p>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Duration</th>
+                            <th>Moderate</th>
+                            <th>High Intensity</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>10 min</td>
+                            <td>~60 cal</td>
+                            <td>~85 cal</td>
+                        </tr>
+                        <tr>
+                            <td>15 min</td>
+                            <td>~90 cal</td>
+                            <td>~125 cal</td>
+                        </tr>
+                        <tr>
+                            <td>20 min</td>
+                            <td>~120 cal</td>
+                            <td>~170 cal</td>
+                        </tr>
+                        <tr>
+                            <td>30 min</td>
+                            <td>~180 cal</td>
+                            <td>~255 cal</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- What to Expect -->
+    <div class="card ref-card">
+        <button class="ref-toggle" aria-expanded="false">
+            <span class="ref-toggle-title">What to Expect — Timeline</span>
+            <span class="ref-toggle-icon">+</span>
+        </button>
+        <div class="ref-body">
+            <div class="timeline">
+                <div class="timeline-item">
+                    <div class="timeline-phase">
+                        <span class="badge badge-info">Weeks 1–2</span>
+                    </div>
+                    <div class="timeline-content">
+                        <p><strong class="text-accent">Soreness &amp; Energy</strong></p>
+                        <p class="text-dim text-sm">Expect muscle soreness in unfamiliar areas (forearms, shoulders). Energy levels may dip as your body adapts. Stick with it — this is normal.</p>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-phase">
+                        <span class="badge badge-moderate">Weeks 3–4</span>
+                    </div>
+                    <div class="timeline-content">
+                        <p><strong class="text-accent">Endurance &amp; Early Results</strong></p>
+                        <p class="text-dim text-sm">Endurance improves noticeably. You can go longer without stopping. Expect 2–5 lbs of weight loss if nutrition is on track.</p>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-phase">
+                        <span class="badge badge-success">Weeks 5–8</span>
+                    </div>
+                    <div class="timeline-content">
+                        <p><strong class="text-accent">Visible Changes</strong></p>
+                        <p class="text-dim text-sm">Tone becomes visible, especially in arms and core. Weight loss of 5–10 lbs is common. Clothes fit differently. Energy is up.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Nutrition Basics -->
+    <div class="card ref-card">
+        <button class="ref-toggle" aria-expanded="false">
+            <span class="ref-toggle-title">Nutrition Basics</span>
+            <span class="ref-toggle-icon">+</span>
+        </button>
+        <div class="ref-body">
+            <h3>Caloric Deficit</h3>
+            <p class="text-dim">Weight loss requires burning more calories than you consume. A deficit of 500 cal/day ≈ 1 lb/week. A deficit of 1000 cal/day ≈ 2 lbs/week (more aggressive).</p>
+            <p class="text-sm text-dim mt-1">Formula: <code>TDEE − 500 = daily target</code>. Your TDEE (Total Daily Energy Expenditure) depends on weight, height, age, and activity level.</p>
+
+            <h3>Protein</h3>
+            <p class="text-dim">Aim for <strong class="text-accent">0.7–1.0 g per pound</strong> of body weight to preserve muscle while cutting. For a 180 lb person, that's 126–180 g/day.</p>
+
+            <h3>Hydration</h3>
+            <p class="text-dim">Drink at least <strong class="text-accent">2–3 liters</strong> of water daily. More on workout days. Dehydration reduces performance and recovery.</p>
+        </div>
+    </div>
+
+    <!-- Form & Technique -->
+    <div class="card ref-card">
+        <button class="ref-toggle" aria-expanded="false">
+            <span class="ref-toggle-title">Form &amp; Technique</span>
+            <span class="ref-toggle-icon">+</span>
+        </button>
+        <div class="ref-body">
+            <h3>Posture</h3>
+            <p class="text-dim">Stand tall with a neutral spine. Don't hunch your shoulders or round your back. Engage your core throughout the movement.</p>
+
+            <h3>Grips</h3>
+            <ul class="ref-list">
+                <li><strong>Standard grip</strong> — palms facing each other, handles at shoulder width. Good for general cardio.</li>
+                <li><strong>Wide grip</strong> — hands wider than shoulders. Emphasizes chest and lats.</li>
+                <li><strong>Narrow grip</strong> — hands close together. More triceps and upper chest.</li>
+            </ul>
+
+            <h3>Stride Variations</h3>
+            <ul class="ref-list">
+                <li><strong>Normal stride</strong> — natural climbing rhythm. Default for most sessions.</li>
+                <li><strong>High knees</strong> — bring knees higher for more intensity and core engagement.</li>
+                <li><strong>Long stride</strong> — extend legs further for a more glute/hamstring focus.</li>
+            </ul>
+
+            <h3>Warm-Up &amp; Cool-Down</h3>
+            <p class="text-dim">Start with 2–3 minutes of slow, easy climbing to warm up. Finish with 2–3 minutes of slow climbing to cool down, followed by light stretching of arms, shoulders, and legs.</p>
+        </div>
+    </div>
+
+    <!-- Common Questions -->
+    <div class="card ref-card">
+        <button class="ref-toggle" aria-expanded="false">
+            <span class="ref-toggle-title">Common Questions</span>
+            <span class="ref-toggle-icon">+</span>
+        </button>
+        <div class="ref-body">
+            <div class="faq-list">
+                <div class="faq-item">
+                    <p class="faq-q"><strong>When will I see results?</strong></p>
+                    <p class="faq-a text-dim">Most people notice changes in energy and endurance within 2–3 weeks. Visible body changes typically appear around weeks 4–8 with consistent use and proper nutrition.</p>
+                </div>
+                <div class="faq-item">
+                    <p class="faq-q"><strong>Can I use it every day?</strong></p>
+                    <p class="faq-a text-dim">Yes, the MaxiClimber is low-impact enough for daily use. However, rest days help recovery and prevent overtraining. A 5-day-on, 2-day-off schedule works well for most people.</p>
+                </div>
+                <div class="faq-item">
+                    <p class="faq-q"><strong>Is it loud?</strong></p>
+                    <p class="faq-a text-dim">No. The MaxiClimber is very quiet — just the sound of pulleys and your own breathing. You can easily use it while watching TV or listening to music.</p>
+                </div>
+                <div class="faq-item">
+                    <p class="faq-q"><strong>Will I get bored?</strong></p>
+                    <p class="faq-a text-dim">The motion is repetitive but meditative. Many users find it easy to zone out with a show or podcast. Varying intensity and trying different routines keeps it interesting.</p>
+                </div>
+                <div class="faq-item">
+                    <p class="faq-q"><strong>What's the weight limit?</strong></p>
+                    <p class="faq-a text-dim">The MaxiClimber supports up to <strong class="text-accent">240 lbs</strong>. The frame is steel and the cables are rated well above that.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick-Start Checklist -->
+    <div class="card ref-card">
+        <button class="ref-toggle" aria-expanded="false">
+            <span class="ref-toggle-title">Quick-Start Checklist</span>
+            <span class="ref-toggle-icon">+</span>
+        </button>
+        <div class="ref-body">
+            <ul class="checklist">
+                <li><input type="checkbox" id="q1"><label for="q1">Assemble the MaxiClimber and test the pulleys</label></li>
+                <li><input type="checkbox" id="q2"><label for="q2">Log your starting weight and measurements</label></li>
+                <li><input type="checkbox" id="q3"><label for="q3">Set your goal weight and start date in Settings</label></li>
+                <li><input type="checkbox" id="q4"><label for="q4">Warm up for 2–3 minutes before your first session</label></li>
+                <li><input type="checkbox" id="q5"><label for="q5">Start with 10–15 minutes at a moderate pace</label></li>
+                <li><input type="checkbox" id="q6"><label for="q6">Log every workout in the tracker</label></li>
+                <li><input type="checkbox" id="q7"><label for="q7">Take weekly measurements (weight, waist)</label></li>
+                <li><input type="checkbox" id="q8"><label for="q8">Follow the Foundation phase schedule for weeks 1–2</label></li>
+                <li><input type="checkbox" id="q9"><label for="q9">Drink water before, during, and after each session</label></li>
+                <li><input type="checkbox" id="q10"><label for="q10">Review progress weekly and adjust as needed</label></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Sources -->
+    <div class="card ref-card">
+        <button class="ref-toggle" aria-expanded="false">
+            <span class="ref-toggle-title">Sources</span>
+            <span class="ref-toggle-icon">+</span>
+        </button>
+        <div class="ref-body">
+            <ul class="ref-list text-dim text-sm">
+                <li>ACSM (American College of Sports Medicine) — Compendium of Physical Activities, metabolic equations for calorie estimation</li>
+                <li>MaxiClimber official specifications — weight capacity, dimensions, calorie burn claims</li>
+                <li>Harvard Health Publishing — calorie expenditure by activity and body weight</li>
+                <li>NASM (National Academy of Sports Medicine) — protein recommendations for weight loss with resistance/cardio training</li>
+                <li>Mayo Clinic — hydration guidelines, safe weight loss rates</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.ref-toggle').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var body = this.nextElementSibling;
+            var expanded = this.getAttribute('aria-expanded') === 'true';
+
+            this.setAttribute('aria-expanded', String(!expanded));
+            this.querySelector('.ref-toggle-icon').textContent = expanded ? '+' : '−';
+            body.style.maxHeight = expanded ? '0' : (body.scrollHeight + 40) + 'px';
+        });
+    });
+});
+</script>
+<style>
+.ref-toggle {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding: 1rem 1.25rem;
+    background: none;
+    border: none;
+    color: var(--text);
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: left;
+    font-family: inherit;
+    transition: color var(--transition);
+}
+.ref-toggle:hover {
+    color: var(--accent);
+}
+.ref-toggle-icon {
+    font-size: 1.25rem;
+    font-weight: 300;
+    color: var(--text-dim);
+    transition: color var(--transition);
+    flex-shrink: 0;
+    margin-left: 1rem;
+}
+.ref-toggle:hover .ref-toggle-icon {
+    color: var(--accent);
+}
+.ref-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.35s ease;
+    padding: 0 1.25rem;
+}
+.ref-body[style*="max-height"] {
+    /* transition handles animation */
+}
+.ref-card {
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 0.75rem;
+}
+.ref-card .ref-body h3 {
+    margin-top: 1.25rem;
+    margin-bottom: 0.5rem;
+    color: var(--text);
+}
+.ref-card .ref-body h3:first-child {
+    margin-top: 0;
+}
+.ref-card .ref-body p {
+    margin-bottom: 0.75rem;
+    line-height: 1.6;
+}
+.ref-card .ref-body p:last-child {
+    margin-bottom: 1rem;
+}
+.ref-list {
+    padding-left: 1.25rem;
+    margin-bottom: 1rem;
+}
+.ref-list li {
+    margin-bottom: 0.4rem;
+    line-height: 1.5;
+}
+
+/* Timeline */
+.timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+.timeline-item {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+}
+.timeline-phase {
+    flex-shrink: 0;
+}
+.timeline-content {
+    flex: 1;
+}
+
+/* FAQ */
+.faq-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+.faq-item {
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+}
+.faq-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+.faq-q {
+    margin-bottom: 0.35rem;
+}
+.faq-a {
+    margin-bottom: 0;
+    line-height: 1.6;
+}
+
+/* Checklist */
+.checklist {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.checklist li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    line-height: 1.5;
+}
+.checklist input[type="checkbox"] {
+    margin-top: 0.25rem;
+    accent-color: var(--accent);
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+.checklist label {
+    cursor: pointer;
+    color: var(--text);
+}
+
+/* Persist checkbox state */
+</style>
+<script>
+(function () {
+    var STORAGE_KEY = 'maxifitness_ref_checklist';
+    var checkboxes = document.querySelectorAll('.checklist input[type="checkbox"]');
+
+    // Load saved state
+    var saved;
+    try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch (e) { saved = {}; }
+    checkboxes.forEach(function (cb) {
+        if (saved[cb.id]) cb.checked = true;
+        cb.addEventListener('change', function () {
+            saved[cb.id] = cb.checked;
+            try { localStorage.setItem(STORAGE_KEY, JSON.stringify(saved)); } catch (e) {}
+        });
+    });
+})();
+</script>
+{% endblock %}

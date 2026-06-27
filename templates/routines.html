@@ -1,0 +1,298 @@
+{% extends "base.html" %}
+
+{% block title %}HIIT & Cross-Training Routines — MaxiFitness{% endblock %}
+
+{% block content %}
+<section class="page-header">
+    <h1>HIIT &amp; Cross-Training Routines</h1>
+    <p class="subtitle">Create your own HIIT sessions without following a video</p>
+</section>
+
+<!-- Filter Tabs -->
+<div class="filter-tabs" id="filterTabs">
+    <button class="filter-tab active" data-filter="all">All</button>
+    <button class="filter-tab" data-filter="hiit">HIIT</button>
+    <button class="filter-tab" data-filter="cross">Cross-Training</button>
+</div>
+
+<!-- Routines List -->
+<div class="routines-list" id="routinesList">
+    {% for r in routines %}
+    <div class="routine-card" data-category="{{ r.category }}">
+        <div class="routine-header">
+            <div class="routine-title-row">
+                <h3>{{ r.name }}</h3>
+                <span class="badge badge-{{ r.difficulty }}">{{ r.difficulty | capitalize }}</span>
+            </div>
+            <div class="routine-meta">
+                <span class="routine-duration">{{ r.total_min }} min</span>
+                <span class="badge badge-{{ r.category }}">{{ r.category | replace('cross', 'Cross-Training') | capitalize }}</span>
+            </div>
+        </div>
+        <div class="routine-body">
+            <p class="routine-description">{{ r.description }}</p>
+            <div class="routine-structure">
+                <strong>Structure:</strong>
+                <p>{{ r.structure }}</p>
+            </div>
+        </div>
+        <div class="routine-footer">
+            <button class="btn btn-primary" onclick="scrollToTimer('{{ r.name }}')">Use this</button>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Interval Timer -->
+<section class="timer-section" id="timerSection">
+    <h2 class="section-title">Interval Timer</h2>
+
+    <div class="timer-config">
+        <div class="timer-input-group">
+            <label for="workDuration">Work (seconds)</label>
+            <input type="number" id="workDuration" min="1" max="600" value="30">
+        </div>
+        <div class="timer-input-group">
+            <label for="restDuration">Rest (seconds)</label>
+            <input type="number" id="restDuration" min="1" max="600" value="30">
+        </div>
+        <div class="timer-input-group">
+            <label for="rounds">Rounds</label>
+            <input type="number" id="rounds" min="1" max="200" value="10">
+        </div>
+    </div>
+
+    <div class="timer-display" id="timerDisplay">
+        <div class="timer-phase" id="timerPhase">READY</div>
+        <div class="timer-countdown" id="timerCountdown">--:--</div>
+        <div class="timer-round" id="timerRound">Round 0 / 0</div>
+    </div>
+
+    <div class="timer-controls">
+        <button class="btn btn-primary btn-lg" id="btnStart" onclick="startTimer()">Start</button>
+        <button class="btn btn-secondary btn-lg" id="btnReset" onclick="resetTimer()">Reset</button>
+    </div>
+
+    <div class="timer-routine-name" id="timerRoutineName"></div>
+</section>
+
+<!-- Form Tips -->
+<section class="form-tips">
+    <h2 class="section-title">Form Tips</h2>
+
+    <div class="tips-grid">
+        <div class="tip-card">
+            <h3>Proper Posture</h3>
+            <ul>
+                <li>Stand tall with shoulders back and down</li>
+                <li>Engage your core throughout the movement</li>
+                <li>Pull with your arms — don't let them drag</li>
+                <li>Full range of motion on every stride</li>
+                <li>Keep your gaze forward, not down</li>
+            </ul>
+        </div>
+
+        <div class="tip-card">
+            <h3>Grip Variations</h3>
+            <ul>
+                <li><strong>Standard:</strong> palms facing the handles, overhand grip</li>
+                <li><strong>Reverse:</strong> palms facing you, underhand grip — hits biceps harder</li>
+                <li><strong>Alternating:</strong> switch grip each round for balanced development</li>
+            </ul>
+        </div>
+
+        <div class="tip-card">
+            <h3>Stride Variations</h3>
+            <ul>
+                <li><strong>Long stride:</strong> deeper knee drive, more glute activation</li>
+                <li><strong>Short stride:</strong> higher cadence, cardio emphasis</li>
+                <li><strong>Climbing squats:</strong> add a squat motion on each step</li>
+                <li><strong>Sprints:</strong> maximum effort, shortest recovery</li>
+            </ul>
+        </div>
+
+        <div class="tip-card">
+            <h3>Warm-up &amp; Cool-down</h3>
+            <ul>
+                <li>Always warm up 3–5 minutes before going hard</li>
+                <li>Start with easy pacing, gradually increase intensity</li>
+                <li>Cool down 2–3 minutes after finishing</li>
+                <li>Stretch calves, quads, hamstrings, and shoulders</li>
+            </ul>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Filter Tabs ──────────────────────────────────────────────
+(function () {
+    var tabs = document.querySelectorAll('.filter-tab');
+    var cards = document.querySelectorAll('.routine-card');
+
+    tabs.forEach(function (tab) {
+        tab.addEventListener('click', function () {
+            tabs.forEach(function (t) { t.classList.remove('active'); });
+            tab.classList.add('active');
+
+            var filter = tab.getAttribute('data-filter');
+            cards.forEach(function (card) {
+                if (filter === 'all' || card.getAttribute('data-category') === filter) {
+                    card.style.display = '';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        });
+    });
+})();
+
+// ── Scroll to Timer ──────────────────────────────────────────
+function scrollToTimer(name) {
+    var el = document.getElementById('timerSection');
+    el.scrollIntoView({ behavior: 'smooth' });
+    document.getElementById('timerRoutineName').textContent = 'Running: ' + name;
+}
+
+// ── Interval Timer ───────────────────────────────────────────
+var timerInterval = null;
+var timerRunning = false;
+var currentPhase = 'idle'; // 'idle', 'work', 'rest', 'done'
+var currentRound = 0;
+var totalRounds = 0;
+var phaseTimeLeft = 0;
+var audioCtx = null;
+
+function getAudioContext() {
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    return audioCtx;
+}
+
+function beep(frequency, duration, volume) {
+    try {
+        var ctx = getAudioContext();
+        var osc = ctx.createOscillator();
+        var gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = frequency;
+        gain.gain.value = volume || 0.3;
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+        osc.stop(ctx.currentTime + duration);
+    } catch (e) {
+        // Audio not available — fail silently
+    }
+}
+
+function formatTime(seconds) {
+    var m = Math.floor(seconds / 60);
+    var s = seconds % 60;
+    return (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+}
+
+function updateDisplay() {
+    var phaseEl = document.getElementById('timerPhase');
+    var countdownEl = document.getElementById('timerCountdown');
+    var roundEl = document.getElementById('timerRound');
+
+    if (currentPhase === 'idle') {
+        phaseEl.textContent = 'READY';
+        phaseEl.className = 'timer-phase';
+        countdownEl.textContent = '--:--';
+        roundEl.textContent = 'Round 0 / 0';
+    } else if (currentPhase === 'done') {
+        phaseEl.textContent = 'DONE';
+        phaseEl.className = 'timer-phase phase-done';
+        countdownEl.textContent = '0:00';
+        roundEl.textContent = 'Round ' + totalRounds + ' / ' + totalRounds;
+    } else {
+        phaseEl.textContent = currentPhase === 'work' ? 'WORK' : 'REST';
+        phaseEl.className = 'timer-phase phase-' + currentPhase;
+        countdownEl.textContent = formatTime(phaseTimeLeft);
+        roundEl.textContent = 'Round ' + currentRound + ' / ' + totalRounds;
+    }
+}
+
+function tick() {
+    phaseTimeLeft--;
+    if (phaseTimeLeft < 0) {
+        // Phase complete
+        if (currentPhase === 'work') {
+            currentPhase = 'rest';
+            phaseTimeLeft = parseInt(document.getElementById('restDuration').value) || 30;
+            beep(440, 0.15, 0.2); // short beep for rest
+        } else {
+            // Rest complete, next round
+            currentRound++;
+            if (currentRound > totalRounds) {
+                currentPhase = 'done';
+                phaseTimeLeft = 0;
+                clearInterval(timerInterval);
+                timerInterval = null;
+                timerRunning = false;
+                document.getElementById('btnStart').textContent = 'Start';
+                beep(880, 0.5, 0.4); // longer beep for done
+                updateDisplay();
+                return;
+            }
+            currentPhase = 'work';
+            phaseTimeLeft = parseInt(document.getElementById('workDuration').value) || 30;
+            beep(880, 0.15, 0.3); // higher beep for work
+        }
+    }
+    updateDisplay();
+}
+
+function startTimer() {
+    if (timerRunning) {
+        // Pause
+        clearInterval(timerInterval);
+        timerInterval = null;
+        timerRunning = false;
+        document.getElementById('btnStart').textContent = 'Start';
+        return;
+    }
+
+    var workDur = parseInt(document.getElementById('workDuration').value) || 30;
+    var restDur = parseInt(document.getElementById('restDuration').value) || 30;
+    totalRounds = parseInt(document.getElementById('rounds').value) || 10;
+
+    if (currentPhase === 'idle' || currentPhase === 'done') {
+        currentRound = 0;
+        currentPhase = 'work';
+        phaseTimeLeft = workDur;
+    } else {
+        // Resuming — keep current state
+    }
+
+    timerRunning = true;
+    document.getElementById('btnStart').textContent = 'Pause';
+
+    updateDisplay();
+    beep(880, 0.15, 0.3); // start beep
+
+    timerInterval = setInterval(tick, 1000);
+}
+
+function resetTimer() {
+    clearInterval(timerInterval);
+    timerInterval = null;
+    timerRunning = false;
+    currentPhase = 'idle';
+    currentRound = 0;
+    totalRounds = 0;
+    phaseTimeLeft = 0;
+    document.getElementById('btnStart').textContent = 'Start';
+    document.getElementById('timerRoutineName').textContent = '';
+    updateDisplay();
+}
+
+// Initialize display
+updateDisplay();
+</script>
+{% endblock %}

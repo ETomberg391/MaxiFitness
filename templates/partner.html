@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% block title %}Partner{% endblock %}
+
+{% block content %}
+{% if not partner %}
+<div class="card">
+    <div class="card-header"><h2>Partner Accountability</h2></div>
+    <div class="partner-empty">
+        <p>No partner linked yet. Link with another user to enable shared accountability.</p>
+        <form method="POST" action="/partner/link" class="d-flex gap-1" style="align-items: flex-end;">
+            <div class="form-group" style="margin-bottom: 0;">
+                <label for="partner_select">Select partner</label>
+                <select id="partner_select" name="partner_id" required>
+                    <option value="">Choose...</option>
+                    {% for u in all_nav_users %}
+                        {% if u.id != session.user_id %}
+                        <option value="{{ u.id }}">{{ u.name }}</option>
+                        {% endif %}
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Link Partner</button>
+        </form>
+    </div>
+</div>
+{% else %}
+
+<!-- Partner Header -->
+<div class="partner-header">
+    <div class="partner-avatars">
+        <div class="partner-avatar"><span class="avatar-label">You</span><span class="avatar-name">{{ current_user_name }}</span></div>
+        <div class="partner-connector">&mdash;</div>
+        <div class="partner-avatar"><span class="avatar-label">Partner</span><span class="avatar-name">{{ partner.partner_name }}</span></div>
+    </div>
+    <div class="partner-actions">
+        {% if partner_days_inactive is not none and partner_days_inactive >= 3 %}
+        <div class="partner-nudge"><span class="nudge-icon">&#128172;</span><span>{{ partner.partner_name }} hasn't logged a workout in {{ partner_days_inactive }} day{{ 's' if partner_days_inactive > 1 }}.</span></div>
+        {% endif %}
+        <form method="POST" action="/partner/unlink" onsubmit="return confirm('End this partnership?');">
+            <button type="submit" class="btn btn-sm btn-secondary" name="action" value="end">End Partnership</button>
+        </form>
+    </div>
+</div>
+
+<!-- Weekly Comparison -->
+<div class="partner-week-grid">
+    <div class="partner-week-card">
+        <div class="card-label">Your Week</div>
+        <div class="week-stats">
+            <div class="week-stat"><span class="week-stat-value">{{ my_week.cnt }}</span><span class="week-stat-label">Workouts</span></div>
+            <div class="week-stat"><span class="week-stat-value">{{ my_week.dur }}</span><span class="week-stat-label">Minutes</span></div>
+            <div class="week-stat"><span class="week-stat-value">{{ my_week.cal }}</span><span class="week-stat-label">Calories</span></div>
+        </div>
+    </div>
+    <div class="partner-week-card">
+        <div class="card-label">{{ partner.partner_name }}'s Week</div>
+        <div class="week-stats">
+            <div class="week-stat"><span class="week-stat-value">{{ partner_week.cnt }}</span><span class="week-stat-label">Workouts</span></div>
+            <div class="week-stat"><span class="week-stat-value">{{ partner_week.dur }}</span><span class="week-stat-label">Minutes</span></div>
+            <div class="week-stat"><span class="week-stat-value">{{ partner_week.cal }}</span><span class="week-stat-label">Calories</span></div>
+        </div>
+    </div>
+</div>
+
+<!-- Active Joint Goals -->
+{% if active_goals %}
+<div class="card">
+    <div class="card-header"><div class="d-flex justify-between align-center"><h2>Joint Goals</h2><a href="/partner/goals" class="btn btn-sm btn-secondary">Manage Goals</a></div></div>
+    {% for g in active_goals %}
+    <div class="joint-goal-row">
+        <div class="goal-info"><span class="goal-name">{{ g.name }}</span><span class="goal-target">{{ g.current_value }} / {{ g.target_value }} {{ g.goal_type | replace('_', ' ') }}</span></div>
+        <div class="goal-progress-bar"><div class="goal-progress-fill" style="width: {{ g.percent }}%"></div></div>
+        <span class="goal-percent">{{ g.percent }}%</span>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Workout Feeds -->
+<div class="partner-feeds">
+    <div class="partner-feed">
+        <h3>Your Recent Workouts</h3>
+        {% for w in my_recent %}
+        <div class="partner-workout-item">
+            <div class="workout-meta"><span class="workout-date">{{ w.date }}</span><span class="workout-duration">{{ w.duration_min }} min</span><span class="badge badge-{{ w.intensity }}">{{ w.intensity | title }}</span></div>
+            <div class="workout-reactions">
+                {% for r in w.reactions %}<span class="reaction-badge" title="{{ r.reactor_name }} reacted">{{ reaction_emoji(r.reaction_type) }}</span>{% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    <div class="partner-feed">
+        <h3>{{ partner.partner_name }}'s Recent Workouts</h3>
+        {% for w in partner_recent %}
+        <div class="partner-workout-item">
+            <div class="workout-meta"><span class="workout-date">{{ w.date }}</span><span class="workout-duration">{{ w.duration_min }} min</span><span class="badge badge-{{ w.intensity }}">{{ w.intensity | title }}</span></div>
+            <div class="workout-reactions" data-workout-id="{{ w.id }}">
+                {% for r in w.reactions %}<span class="reaction-badge {% if r.reactor_name == current_user_name %}your-reaction{% endif %}" title="{{ r.reactor_name }} reacted">{{ reaction_emoji(r.reaction_type) }}</span>{% endfor %}
+                <div class="reaction-buttons">
+                    {% for rtype in ['fire', 'muscle', 'heart', 'star', 'wave'] %}
+                    <button class="reaction-btn" data-type="{{ rtype }}" data-wid="{{ w.id }}" title="{{ reaction_label(rtype) }}">{{ reaction_emoji(rtype) }}</button>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.querySelectorAll('.reaction-btn').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        var wid = this.dataset.wid, rt = this.dataset.type, self = this;
+        fetch('/api/partner/reaction', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({workout_id: wid, reaction_type: rt})})
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.error) { alert(data.error); return; }
+            var container = self.closest('.workout-reactions');
+            container.querySelectorAll('.reaction-badge, .reaction-buttons').forEach(function(el) { el.remove(); });
+            data.reactions.forEach(function(r) {
+                var b = document.createElement('span');
+                b.className = 'reaction-badge';
+                b.title = r.reactor_name + ' reacted';
+                b.textContent = '{{ reaction_emoji("fire") }}';
+                // Map reaction type to emoji via server
+                var emojiMap = {{ REACTION_EMOJI | tojson }};
+                b.textContent = emojiMap[r.reaction_type] || '';
+                container.appendChild(b);
+            });
+            var bc = document.createElement('div');
+            bc.className = 'reaction-buttons';
+            ['fire','muscle','heart','star','wave'].forEach(function(t) {
+                var nb = document.createElement('button');
+                nb.className = 'reaction-btn';
+                nb.dataset.type = t; nb.dataset.wid = wid;
+                var emojiMap = {{ REACTION_EMOJI | tojson }};
+                nb.textContent = emojiMap[t] || '';
+                if (data.reactions.find(function(r) { return r.reaction_type === t; })) nb.classList.add('active');
+                nb.addEventListener('click', arguments.callee.caller);
+                bc.appendChild(nb);
+            });
+            container.appendChild(bc);
+        });
+    });
+});
+</script>
+{% endblock %}

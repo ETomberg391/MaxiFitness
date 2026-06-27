@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+
+{% block title %}Users — MaxiFitness{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Users</h1>
+</div>
+
+{% if current_user %}
+<!-- Current user profile -->
+<div class="card">
+    <div class="card-header"><h2>{{ current_user['name'] }}</h2></div>
+    <form method="POST" action="/users/{{ current_user['id'] }}/edit">
+        <div class="form-group">
+            <label>Name</label>
+            <input type="text" name="name" value="{{ current_user['name'] }}" required>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Weight (lbs)</label>
+                <input type="number" step="0.1" name="weight_lbs" value="{{ current_user['weight_lbs'] or '' }}">
+            </div>
+            <div class="form-group">
+                <label>Height (ft)</label>
+                <input type="number" name="height_ft" value="{{ current_user['height_ft'] or '' }}">
+            </div>
+            <div class="form-group">
+                <label>Height (in)</label>
+                <input type="number" name="height_in" value="{{ current_user['height_in'] or '' }}">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>BMI</label>
+            <div class="bmi-display">{{ current_user['bmi'] or '—' }}</div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Favorite Routine</label>
+                <select name="favorite_routine_id">
+                    <option value="">— None —</option>
+                    {% for r in routines %}
+                    <option value="{{ r['id'] }}" {% if r['id'] == current_user['favorite_routine_id'] %}selected{% endif %}>{{ r['name'] }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Favorite Video</label>
+                <select name="favorite_video_id">
+                    <option value="">— None —</option>
+                    {% for v in videos %}
+                    <option value="{{ v['id'] }}" {% if v['id'] == current_user['favorite_video_id'] %}selected{% endif %}>{{ v['name'] }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Notes</label>
+            <textarea name="notes" rows="3">{{ current_user['notes'] or '' }}</textarea>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Age</label>
+                <input type="number" name="age" value="{{ current_user['age'] or '' }}">
+            </div>
+            <div class="form-group">
+                <label>Gender</label>
+                <select name="gender">
+                    <option value="female" {% if not current_user['gender'] or current_user['gender'] == 'female' %}selected{% endif %}>Female</option>
+                    <option value="male" {% if current_user['gender'] == 'male' %}selected{% endif %}>Male</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Weigh-in Day</label>
+                <select name="weighin_day">
+                    <option value="0" {% if not current_user['weighin_day'] %}selected{% endif %}>Monday</option>
+                    <option value="1" {% if current_user['weighin_day'] == 1 %}selected{% endif %}>Tuesday</option>
+                    <option value="2" {% if current_user['weighin_day'] == 2 %}selected{% endif %}>Wednesday</option>
+                    <option value="3" {% if current_user['weighin_day'] == 3 %}selected{% endif %}>Thursday</option>
+                    <option value="4" {% if current_user['weighin_day'] == 4 %}selected{% endif %}>Friday</option>
+                    <option value="5" {% if current_user['weighin_day'] == 5 %}selected{% endif %}>Saturday</option>
+                    <option value="6" {% if current_user['weighin_day'] == 6 %}selected{% endif %}>Sunday</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Diet Focus</label>
+            <select name="diet_focus">
+                <option value="calorie" {% if not current_user['diet_focus'] or current_user['diet_focus'] == 'calorie' %}selected{% endif %}>Calorie</option>
+                <option value="keto" {% if current_user['diet_focus'] == 'keto' %}selected{% endif %}>Keto</option>
+                <option value="protein" {% if current_user['diet_focus'] == 'protein' %}selected{% endif %}>Protein</option>
+                <option value="balanced" {% if current_user['diet_focus'] == 'balanced' %}selected{% endif %}>Balanced</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label><input type="checkbox" name="prolapse_safe" {% if current_user.get('prolapse_safe') %}checked{% endif %}> Prolapse-safe exercise filtering</label>
+        </div>
+        <button type="submit" class="btn btn-primary">Save Profile</button>
+    </form>
+</div>
+{% endif %}
+
+<!-- All users list -->
+<div class="card">
+    <div class="card-header"><h2>All Users</h2></div>
+    {% if all_users %}
+    <div class="user-list">
+        {% for u in all_users %}
+        <div class="user-card {% if u['id'] == session.user_id %}active{% endif %}">
+            <div class="user-info">
+                <strong>{{ u['name'] }}</strong>
+                {% if u['weight_lbs'] %}<span>{{ u['weight_lbs'] }} lbs</span>{% endif %}
+                {% if u['bmi'] %}<span class="bmi-badge">{{ u['bmi'] }}</span>{% endif %}
+            </div>
+            <div class="user-actions">
+                {% if u['id'] != session.user_id %}
+                <form method="POST" action="/users/{{ u['id'] }}/select" style="display:inline;">
+                    <button type="submit" class="btn btn-sm btn-secondary">Switch</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p>No users yet. Add one below.</p>
+    {% endif %}
+</div>
+
+<!-- Add new user form -->
+<div class="card">
+    <div class="card-header"><h2>Add New User</h2></div>
+    <form method="POST" action="/users">
+        <div class="form-group">
+            <label>Name *</label>
+            <input type="text" name="name" required>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Weight (lbs)</label>
+                <input type="number" step="0.1" name="weight_lbs">
+            </div>
+            <div class="form-group">
+                <label>Height (ft)</label>
+                <input type="number" name="height_ft">
+            </div>
+            <div class="form-group">
+                <label>Height (in)</label>
+                <input type="number" name="height_in">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Age</label>
+                <input type="number" name="age">
+            </div>
+            <div class="form-group">
+                <label>Gender</label>
+                <select name="gender">
+                    <option value="female">Female</option>
+                    <option value="male">Male</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Weigh-in Day</label>
+                <select name="weighin_day">
+                    <option value="0">Monday</option>
+                    <option value="1">Tuesday</option>
+                    <option value="2">Wednesday</option>
+                    <option value="3">Thursday</option>
+                    <option value="4">Friday</option>
+                    <option value="5">Saturday</option>
+                    <option value="6">Sunday</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Diet Focus</label>
+            <select name="diet_focus">
+                <option value="calorie">Calorie</option>
+                <option value="keto">Keto</option>
+                <option value="protein">Protein</option>
+                <option value="balanced">Balanced</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label><input type="checkbox" name="prolapse_safe"> Prolapse-safe exercise filtering</label>
+        </div>
+        <div class="form-group">
+            <label>Start Date</label>
+            <input type="date" name="start_date" value="{{ today }}">
+        </div>
+        <div class="form-group">
+            <label>Notes</label>
+            <textarea name="notes" rows="2"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Add User</button>
+    </form>
+</div>
+{% endblock %}
